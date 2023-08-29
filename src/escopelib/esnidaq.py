@@ -4,115 +4,49 @@ This started from Dr Lock's work at
 http://www.drlock.com/projects/pyrwi/docs/examples/index.php?ex=ContAcq_nidaqmx
 """
 
-import ctypes
 import numpy as np
-import pylab as pl
-import time
-import sys
 
 try:
-    nidaq = ctypes.windll.nicaiu # load the DLL
-except AttributeError:
+    import nidaqmx
+    import nidaqmx.stream_readers
+    nidaq = True
+except ImportError:
     nidaq = None
+    print("no nidaqmx")
     
 
-##############################
-# Setup some typedefs and constants to correspond with values in
-# C:\Program Files\National Instruments\NI-DAQ\DAQmx ANSI C Dev\include\NIDAQmx.h
-
-# The typedefs
-int32 = ctypes.c_int32
-uInt32 = ctypes.c_uint32
-uInt64 = ctypes.c_uint64
-float64 = ctypes.c_double
-TaskHandle = uInt32
-
 # The constants
-DAQmx_Val_Cfg_Default = int32(-1)
-DAQmx_Val_RSE = 10083
-DAQmx_Val_Volts = 10348
-DAQmx_Val_Rising = 10280
- 
-DAQmx_Val_FiniteSamps = 10178
-DAQmx_Val_ContSamps = 10123
-DAQmx_Val_HWTimedSinglePoint= 12522
+DAQmx_RSE = nidaqmx.constants.TerminalConfiguration.RSE
+DAQmx_Volts = nidaqmx.constants.VoltageUnits.VOLTS
+DAQmx_Rising = nidaqmx.constants.Edge.RISING
+
+DAQmx_FiniteSamps = nidaqmx.constants.AcquisitionType.FINITE
+DAQmx_ContSamps = nidaqmx.constants.AcquisitionType.CONTINUOUS
+DAQmx_HWTimedSinglePoint= nidaqmx.constants.AcquisitionType.HW_TIMED_SINGLE_POINT
  
 # Values for the everyNsamplesEventType parameter of
 # DAQmxRegisterEveryNSamplesEvent
 DAQmx_Val_Acquired_Into_Buffer = 1 # Acquired Into Buffer
 DAQmx_Val_Transferred_From_Buffer = 2 # Transferred From Buffer
- 
-# Values for the Fill Mode parameter of DAQmxReadXXX and for the
-# Data Layout parameter of DAQmxWriteXXX
-DAQmx_Val_GroupByChannel = 0 # Group by Channel
-DAQmx_Val_GroupByScanNumber = 1 # Group by Scan Number
 
-DAQmx_Val_Task_Abort = 6
 
-# ----------------------------------------------------------------------
-def mkBuf(nBytes):
-    return ctypes.create_string_buffer(nBytes)
-
-def CHK(err, th=None):
-    """a simple error checking routine"""
-    if err < 0:
-        buf = mkBuf(500)
-        nidaq.DAQmxGetErrorString(err, ctypes.byref(buf), 500)
-        exc = RuntimeError('NIDAQ call failed with error %d: %s' %
-                           (err, repr(buf.value)))
-        if th is not None:
-            nidaq.DAQmxTaskControl(th,DAQmx_Val_Task_Abort)
-        raise exc
-
-# ----------------------------------------------------------------------
-def taskNames():
-    if nidaq is None:
-        return []
-    buf = mkBuf(2000)
-    err = nidaq.DAQmxGetSysTasks(ctypes.byref(buf), 2000)
-    if err:
-        return []
-    devs = buf.value
-    return devs.split(', ')
-    
 def deviceList():
     if nidaq is None:
         return []
-    buf = mkBuf(2000)
-    err = nidaq.DAQmxGetSysDevNames(ctypes.byref(buf), 2000)
-    if err:
-        return []
-    devs = buf.value
-    return devs.split(', ')
-
-def devTypeName(dev):
-    typ = mkBuf(256)
-    CHK(nidaq.DAQmxGetDevProductType(dev, typ, 256))
-    return typ.value
-
-def devTypeCode(dev):
-    prodnum = ctypes.c_uint32()
-    CHK(nidaq.DAQmxGetDevProductNum(dev, ctypes.byref(prodnum)))
-    return prodnum.value
-
-def devSerialNo(dev):
-    sernum = ctypes.c_uInt32()
-    CHK(nidaq.DAQmxGetDevSerialNum(dev, ctypes.byref(sernum)))
-    return sernum.value
+    system = nidaqmx.system.System.local()
+    devs = [dev.name for dev in system.devices]
+    print("device list", devs)
+    return devs
 
 def devAIChannels(dev):
-    buf = mkBuf(2000)
-    CHK(nidaq.DAQmxGetDevAIPhysicalChans(dev, ctypes.byref(buf), 2000))
-    chs = buf.value
-    chs = chs.replace(dev + '/', '')
-    return chs.split(', ')
+    system = nidaqmx.system.System.local()
+    chs = [c.name for c in system.devices[dev].ai_physical_chans]
+    return [c.replace(dev + '/', '') for c in chs]
 
 def devAOChannels(dev):
-    buf = mkBuf(2000)
-    CHK(nidaq.DAQmxGetDevAOPhysicalChans(dev, ctypes.byref(buf), 2000))
-    chs = buf.value
-    chs = chs.replace(dev + '/', '')
-    return chs.split(', ')
+    system = nidaqmx.system.System.local()
+    chs = [c.name for c in system.devices[dev].ao_physical_chans]
+    return [c.replace(dev + '/', '') for c in chs]
 
 ######################################################################
 contacq_nextid = 1
@@ -138,20 +72,6 @@ def assert_none_prepped(newid=None):
         print('(while working on DAQ', newid, ')')
         
 
-EVERYNFUNC = ctypes.CFUNCTYPE(int32, TaskHandle, int32, uInt32,
-                              ctypes.c_void_p)
-def everyN(th, everyNsamplesEventType, nSamples, callbackData):
-    global contacq_collection
-    #print 'everyN', th, everyNsamplesEventType, nSamples, callbackData
-    if th in contacq_taskfinder:
-        callbackData = contacq_taskfinder[th]
-    if callbackData in contacq_collection:
-        #print '  calling foo with', nSamples
-        contacq_collection[callbackData].foo(nSamples)
-    else:
-        raise AttributeError('everyN called with unknown task')
-    return 0
-EveryNCallback_func = EVERYNFUNC(everyN)
 
 class ContAcqTask:
     def __init__(self, dev, chans, acqrate_hz, rnge):
@@ -165,6 +85,7 @@ class ContAcqTask:
         self.nscans = 1000
         self.prepped = False
         self.running = False
+        self.rdr = None
 
     def __del__(self):
         self.stop()
@@ -185,10 +106,7 @@ class ContAcqTask:
         contacq_nextid += 1
         if nidaq is None:
             raise AttributeError('No NIDAQ library found')
-        self.th = TaskHandle(0)
-        CHK(nidaq.DAQmxCreateTask("foo",ctypes.byref(self.th)))
-        taskNames()
-        
+        self.th = nidaqmx.Task()
         try:
             self.nchans = 0
             for k in range(len(self.chans)):
@@ -196,37 +114,27 @@ class ContAcqTask:
                 rng = self.range[k]
                 if rng>10.:
                     rng = 10.
-                CHK(nidaq.DAQmxCreateAIVoltageChan(self.th,
-                                                   self.dev+"/"+ch,"",
-                                                   DAQmx_Val_RSE,
-                                                   float64(-rng),float64(rng),
-                                                   DAQmx_Val_Volts, None))
+                self.th.ai_channels.add_ai_voltage_chan(self.dev + "/" + ch,
+                                                        ch,
+                                                        terminal_config=DAQmx_RSE,
+                                                        min_val=-rng, max_val=rng)
                 self.nchans += 1
             
-            CHK(nidaq.DAQmxCfgSampClkTiming(self.th,"",
-                                            float64(self.acqrate_hz),
-                                            DAQmx_Val_Rising,
-                                            DAQmx_Val_ContSamps,
-                                            uInt64(self.nscans)))
+            self.th.timing.cfg_samp_clk_timing(self.acqrate_hz,
+                                               active_edge=DAQmx_Rising,
+                                               sample_mode=DAQmx_ContSamps,
+                                               samps_per_chan=self.nscans)
             if self.foo is not None:
-                CHK(nidaq.DAQmxRegisterEveryNSamplesEvent(self.th,
-                                                          DAQmx_Val_Acquired_Into_Buffer,
-                                                          self.nscans,
-                                                          0,
-                                                          EveryNCallback_func,
-                                                          25))
+                self.th.register_every_n_samples_acquired_into_buffer_event(self.nscans, self.foo)
+
         except RuntimeError as e:
             print('Preparation failed:', e)
-            try:
-                if nidaq:
-                    CHK(nidaq.DAQmxClearTask(self.th))
-            except RunTimeError as e:
-                print('Double failure:', e)
+            self.th.close()
             self.th = None
             self.collectionid = None
         else:
             contacq_collection[self.collectionid] = self
-            contacq_taskfinder[self.th.value] = self.collectionid
+            contacq_taskfinder[self.th.name] = self.collectionid
             self.prepped = True
             
     def run(self):
@@ -237,13 +145,15 @@ class ContAcqTask:
             return
         if self.running:
             return
-        CHK(nidaq.DAQmxStartTask(self.th))
+        self.rdr = nidaqmx.stream_readers.AnalogMultiChannelReader(self.th.in_stream)
+        self.th.start()
         self.running = True
      
     def stop(self):
         if self.running:
-            CHK(nidaq.DAQmxTaskControl(self.th,DAQmx_Val_Task_Abort))
+            self.th.stop()
             self.running = False
+            self.rdr = None
 
     def unprep(self):
         global contacq_collection
@@ -256,33 +166,27 @@ class ContAcqTask:
                 # if this unprep is due to program exit
                 del contacq_collection[self.collectionid]
             if contacq_taskfinder:
-                del contacq_taskfinder[self.th.value]
+                del contacq_taskfinder[self.th.name]
             self.collectionid = None
             if nidaq:
-                CHK(nidaq.DAQmxClearTask(self.th))
+                self.th.close()
             self.th = None
     
     def getData(self, dst):
-        nscans = min(dst.shape[0],self.nscans)
-        nread = int32()
-        if self.running:
-            CHK(nidaq.DAQmxReadAnalogF64(self.th, nscans, float64(10.0),
-                                         DAQmx_Val_GroupByScanNumber,
-                                         dst.ctypes.data,nscans*self.nchans,
-                                         ctypes.byref(nread),None), self.th)
-        return nread.value
+        if not self.running:
+            return 0
+        T, C = dst.shape
+        nscans = min(T, self.nscans)
+        dat = np.empty((C, nscans))
+        n = self.rdr.read_many_sample(dat, nscans)
+        dst[:n,:] = dat.T
+        return n
+
 
 ######################################################################
 finiteprod_nextid = 1
 finiteprod_collection = {}
-DONEFUNC = ctypes.CFUNCTYPE(int32, TaskHandle, int32, ctypes.c_void_p)
-def DoneCallback(taskHandle, status, callbackData):
-    global finiteprod_collection
-    if callbackData in finiteprod_collection:
-        finiteprod_collection[callbackData].foo()
-    return 0;
-DoneCallback_func = DONEFUNC(DoneCallback)
- 
+
 class FiniteProdTask:
     def __init__(self, dev, chans, genrate_hz, data):
         self.dev = dev

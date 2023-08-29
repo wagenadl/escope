@@ -45,9 +45,9 @@ class ESDS_Nidaq(ESDataSource):
         self.acqtask.stop()
         self.acqtask.unprep()
 
-    def feedData(self, nsamp):
-        print('esdsnidaq.feedData: nsamp =', nsamp)
-        self.dataAvailable.emit()        
+    def feedData(self, *args):
+        self.dataAvailable.emit()
+        return 0
 
     def getData(self, dst):
         #print 'esdsnidaq.getdata: dst:',dst.shape
