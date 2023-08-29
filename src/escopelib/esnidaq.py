@@ -2,6 +2,7 @@
 Wrapper for NIDAQmx functions
 This started from Dr Lock's work at
 http://www.drlock.com/projects/pyrwi/docs/examples/index.php?ex=ContAcq_nidaqmx
+For version 2.0, this was rewritten extensively to use the newer “nidaqmx” module from NI.
 """
 
 import numpy as np
@@ -15,7 +16,7 @@ except ImportError:
     print("no nidaqmx")
     
 
-# The constants
+# Some constants
 DAQmx_RSE = nidaqmx.constants.TerminalConfiguration.RSE
 DAQmx_Volts = nidaqmx.constants.VoltageUnits.VOLTS
 DAQmx_Rising = nidaqmx.constants.Edge.RISING
@@ -23,11 +24,6 @@ DAQmx_Rising = nidaqmx.constants.Edge.RISING
 DAQmx_FiniteSamps = nidaqmx.constants.AcquisitionType.FINITE
 DAQmx_ContSamps = nidaqmx.constants.AcquisitionType.CONTINUOUS
 DAQmx_HWTimedSinglePoint= nidaqmx.constants.AcquisitionType.HW_TIMED_SINGLE_POINT
- 
-# Values for the everyNsamplesEventType parameter of
-# DAQmxRegisterEveryNSamplesEvent
-DAQmx_Val_Acquired_Into_Buffer = 1 # Acquired Into Buffer
-DAQmx_Val_Transferred_From_Buffer = 2 # Transferred From Buffer
 
 
 def deviceList():
@@ -35,7 +31,6 @@ def deviceList():
         return []
     system = nidaqmx.system.System.local()
     devs = [dev.name for dev in system.devices]
-    print("device list", devs)
     return devs
 
 def devAIChannels(dev):
@@ -49,34 +44,11 @@ def devAOChannels(dev):
     return [c.replace(dev + '/', '') for c in chs]
 
 ######################################################################
-contacq_nextid = 1
-contacq_collection = {}
-contacq_taskfinder = {}
-
-def assert_none_prepped(newid=None):
-    good = True
-    for a in contacq_collection.keys():
-        dq = contacq_collection[a]
-        thisbad = False
-        if dq.prepped:
-            print('DAQ', a, 'prepped')
-            thisbad = True
-        if dq.th:
-            print('DAQ', a, 'has nonzero taskhandle')
-            thisbad = True
-        if thisbad:
-            dq.stop()
-            dq.unprep()
-            good = False
-    if not good and newid is not None:
-        print('(while working on DAQ', newid, ')')
-        
 
 
 class ContAcqTask:
     def __init__(self, dev, chans, acqrate_hz, rnge):
         self.dev = dev
-        self.collectionid = None
         self.chans = chans
         self.range = rnge
         self.acqrate_hz = acqrate_hz
@@ -97,13 +69,8 @@ class ContAcqTask:
         self.nscans = nscans
 
     def prep(self):
-        global contacq_nextid
-        global contacq_collection
         if self.prepped:
             return
-        assert_none_prepped(contacq_nextid)
-        self.collectionid = contacq_nextid
-        contacq_nextid += 1
         if nidaq is None:
             raise AttributeError('No NIDAQ library found')
         self.th = nidaqmx.Task()
@@ -131,10 +98,7 @@ class ContAcqTask:
             print('Preparation failed:', e)
             self.th.close()
             self.th = None
-            self.collectionid = None
         else:
-            contacq_collection[self.collectionid] = self
-            contacq_taskfinder[self.th.name] = self.collectionid
             self.prepped = True
             
     def run(self):
@@ -156,18 +120,10 @@ class ContAcqTask:
             self.rdr = None
 
     def unprep(self):
-        global contacq_collection
         if self.running:
             raise AttributeError('Cannot unprepare while running')
         if self.prepped:
             self.prepped = False
-            if contacq_collection:
-                # ^ This checks that the collection hasn't been deleted yet
-                # if this unprep is due to program exit
-                del contacq_collection[self.collectionid]
-            if contacq_taskfinder:
-                del contacq_taskfinder[self.th.name]
-            self.collectionid = None
             if nidaq:
                 self.th.close()
             self.th = None
