@@ -198,10 +198,10 @@ class FiniteProdTask:
             return
         #nwritten = int32()
         #offset = 0
-        self.th.out_stream.auto_start = True
         wrtr = nidaqmx.stream_writers.AnalogMultiChannelWriter(self.th.out_stream)
-        nwritten = writr.write_many_samples(self.data.T)
+        nwritten = wrtr.write_many_sample(self.data.T.copy())
         print(self.data.shape, nwritten)
+        self.th.start()
         self.running = True
      
     def stop(self):
@@ -212,7 +212,7 @@ class FiniteProdTask:
     def isRunning(self):
         if not self.running:
             return False
-        if th.wait_until_done(0.0001):
+        if self.th.wait_until_done(0.0001):
             # ^ The NIDAQ docs say that I can use float64(0.0) for immediate
             # answer, but that did not work for me. So I wait 0.1 ms instead.
             return True

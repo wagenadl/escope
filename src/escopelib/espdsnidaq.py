@@ -42,4 +42,4 @@ class ESPDS_Nidaq(ESPDataSink):
         self.markEnded()
         self.gentask.unprep()
         self.runComplete.emit()
-        
+        return 0
