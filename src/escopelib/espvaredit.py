@@ -1,9 +1,10 @@
 # espvaredit.py
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 import numpy as np
-import espconfig
+from . import espconfig
 
 class ESPVarEdit(QLineEdit):
     userChanged = pyqtSignal(str,int)

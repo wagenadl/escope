@@ -1,9 +1,9 @@
 # esppulsegraph.py
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-from espgraph import ESPGraph
-import espconfig
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from .espgraph import ESPGraph
+from .import espconfig
 import numpy as np
 
 class ESPPulseGraph(ESPGraph):

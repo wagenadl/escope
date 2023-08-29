@@ -1,9 +1,10 @@
 # esptraingraph.py
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-from espgraph import ESPGraph, ESPQ
-import espconfig
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+from .espgraph import ESPGraph, ESPQ
+from . import espconfig
 import numpy as np
 
 class ESPTrainGraph(ESPGraph):

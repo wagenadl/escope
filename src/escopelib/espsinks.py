@@ -1,7 +1,7 @@
 # espsinks.py
 
-import espdatasink
-import espdsnidaq
+from . import espdatasink
+from . import espdsnidaq
 
 def makeDataSink(cfg):
     if cfg.hw.adapter[0]=='nidaq':

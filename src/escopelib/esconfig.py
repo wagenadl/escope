@@ -1,10 +1,10 @@
 # esconfig.py - Basic configuration parameters for escope
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
 import sys
 import numpy as np
-import esnidaq
+from . import esnidaq
 import time
 
 from Struct import Struct
@@ -27,7 +27,7 @@ def scale125(uold, du):
     unewdecade = np.floor(unewf)
     unewsub = unewf - unewdecade
     vals=np.array([1, 2, 5])
-    unewminor = vals[np.round(3*unewsub)]
+    unewminor = vals[int(3*unewsub+.5)]
     unew = 10**unewdecade * unewminor
     return unew
 
@@ -96,7 +96,7 @@ def inputchannels(ada):
     if typ=='dummy':
         chs = []
         for k in range(8):
-            chs.append('ai' + `k`)
+            chs.append(f'ai{k}')
     elif typ=='nidaq':
         dev = ada[1]
         chs = esnidaq.devAIChannels(dev)
@@ -131,9 +131,9 @@ def basicconfig():
     cfg.FONTSIZE = 14
     cfg.colors = []
     for k in range(len(cfg.COLORS)):
-        cfg.colors.append(QColor(255*cfg.COLORS[k][0],
-                                 255*cfg.COLORS[k][1],
-                                 255*cfg.COLORS[k][2]))
+        cfg.colors.append(QColor(int(255*cfg.COLORS[k][0]),
+                                 int(255*cfg.COLORS[k][1]),
+                                 int(255*cfg.COLORS[k][2])))
                                  
 
     cfg.hw = Struct()

@@ -1,9 +1,9 @@
 # espdatasink.py - abstract data sink
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
 import sys
-import espconfig
+from . import espconfig
 import numpy as np
 import ctypes
 
@@ -51,12 +51,12 @@ class ESPDS_Dummy(ESPDataSink):
 
     def run(self):
         ESPDataSink.run(self)
-        if self.timerid!=None:
+        if self.timerid is not None:
             self.killTimer(self.timerid)
-        self.timerid = self.startTimer(self.t_end_s*1000)
+        self.timerid = self.startTimer(int(self.t_end_s*1000))
         
     def stop(self):
-        if self.timerid!=None:
+        if self.timerid is not None:
             self.killTimer(self.timerid)
         ESPDataSink.stop(self)
 
@@ -64,7 +64,7 @@ class ESPDS_Dummy(ESPDataSink):
         self.killTimer(self.timerid)
         self.timerid=None
         self.markEnded()
-        print 'espdatasink: timerevent: emitting runcomplete'
+        print('espdatasink: timerevent: emitting runcomplete')
         self.runComplete.emit()
 
 if __name__ == "__main__":
@@ -75,17 +75,17 @@ if __name__ == "__main__":
     ds.reconfig()
 
     def rcv():
-        print "Recv!"
+        print("Recv!")
         
     ds.runComplete.connect(rcv)
 
     win = QWidget()
     win.show()
 
-    print 'window open'
+    print('window open')
     ds.reconfig()
-    print 'configured'
+    print('configured')
     ds.run()
-    print 'running'
+    print('running')
     
     app.exec_()

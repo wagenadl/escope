@@ -1,8 +1,9 @@
 import numpy as np
 import sys
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
 class ESPGraph(FigureCanvas):
@@ -10,7 +11,7 @@ class ESPGraph(FigureCanvas):
         fig = Figure()
         self.axes = fig.add_axes([0.20,0.20,.78,.78])
         # self.axes = fig.add_subplot(111)
-        self.axes.hold(True)
+        # self.axes.hold(True)
         FigureCanvas.__init__(self, fig)
         self.setParent(parent)
         self.setSizePolicy(QSizePolicy.Expanding,

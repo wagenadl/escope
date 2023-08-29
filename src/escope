@@ -1,9 +1,10 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 
 # esscope.py
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 import sys
 import os
 import re
@@ -64,7 +65,7 @@ class MainWin(QWidget):
         scrw = scr.screenGeometry().width()
         scrh = scr.screenGeometry().height()
         self.resize(500,400)
-        self.move(scrw/2-self.width()/2,scrh/2-self.width()/2)
+        self.move(scrw//2-self.width()//2,scrh//2-self.width()//2)
 
     def makeContents(self):
         LSIZE = 40
@@ -207,7 +208,7 @@ class MainWin(QWidget):
         
 
     def click_hardware(self):
-        if self.h_hw==None:
+        if self.h_hw is None:
             self.h_hw = ESHardware(self.cfg)
             self.h_hw.cfgChanged.connect(self.hwChanged)
         self.h_hw.reconfig()
@@ -215,7 +216,7 @@ class MainWin(QWidget):
         self.h_hw.raise_()
             
     def click_channels(self):
-        if self.h_chn==None:
+        if self.h_chn is None:
             self.h_chn = ESChannels(self.cfg)
             self.h_chn.cfgChanged.connect(self.chnChanged)
         self.h_chn.reconfig()
@@ -223,7 +224,7 @@ class MainWin(QWidget):
         self.h_chn.raise_()
 
     def click_trigger(self):
-        if self.h_trig==None:
+        if self.h_trig is None:
             self.h_trig = ESTrigger(self.cfg)
             self.h_trig.cfgChanged.connect(self.trigChanged)
         self.h_trig.reconfig()
@@ -260,7 +261,7 @@ class MainWin(QWidget):
             p.setColor(QPalette.WindowText,QColor("white"))
             self.hdate.setPalette(p)
         if self.ds.run():
-            print 'Running'
+            print('Running')
         else:
             raise AttributeError('Failed to run')
         self.update()
@@ -270,7 +271,7 @@ class MainWin(QWidget):
             self.stopRun()
         else:
             self.stopRequested = True
-            print 'Stopping soon'
+            print('Stopping soon')
 
     def stopRun(self):
         self.inSweep = False
@@ -284,7 +285,7 @@ class MainWin(QWidget):
         p=self.hdate.palette()
         p.setColor(QPalette.WindowText,QColor("gray"))
         self.hdate.setPalette(p)
-        print 'Stopped'
+        print('Stopped')
 
     def sweepComplete(self):
         self.inSweep = False
@@ -301,7 +302,7 @@ class MainWin(QWidget):
         self.inSweep = True
 
     def restart(self):
-        wasRunning = self.ds!=None
+        wasRunning = self.ds is not None
         if wasRunning:
             self.stopRun()
             self.startRun()
@@ -309,7 +310,7 @@ class MainWin(QWidget):
 
     def hwChanged(self):
         #print 'HARDWARE changed'
-        if self.h_chn!=None and self.h_chn.isVisible():
+        if self.h_chn is not None and self.h_chn.isVisible():
             self.h_chn.reconfig()
         self.restart()
 
@@ -319,15 +320,15 @@ class MainWin(QWidget):
 
     def trigChanged(self):
         #print 'TRIGGER changed'
-        if self.h_trig!=None and self.h_trig.isVisible():
+        if self.h_trig is not None and self.h_trig.isVisible():
             if self.h_trig.h_enable.isChecked() != self.cfg.trig.enable:
                 self.h_trig.h_enable.setChecked(self.cfg.trig.enable)
         self.restart()
 
     def trigShifted(self):
-        if self.ds!=None:
+        if self.ds is not None:
             self.ds.rethresh()
-        if self.h_trig!=None and self.h_trig.isVisible():
+        if self.h_trig is not None and self.h_trig.isVisible():
             if self.h_trig.h_auto.isChecked() != self.cfg.trig.auto:
                 self.h_trig.h_auto.setChecked(self.cfg.trig.auto)
         self.update()
@@ -335,7 +336,7 @@ class MainWin(QWidget):
     def vertChanged(self,k):
         #print 'VERTICAL changed', k
         self.apane.rebuild()
-        if self.ds!=None:
+        if self.ds is not None:
             self.ds.rethresh()
         self.update()
 
@@ -344,7 +345,7 @@ class MainWin(QWidget):
         self.restart()
 
     def writeInfoFile(self, name=None):
-        if name==None:
+        if name is None:
             name = self.rundate
         f = open(name + ".txt","w")
         f.write("rundate = '" + self.rundate + "'\n");
@@ -356,18 +357,17 @@ class MainWin(QWidget):
                 f.write("'" + cfg.hw.channels[int(ch)] + "' ")
                 nch += 1
         f.write("}\n")
-        f.write("nchannels = %i\n" % nch)
+        f.write(f"nchannels = {nch}\n")
         f.write("scale = { ")
         for ch in range(len(self.cfg.conn.hw)):
             if not np.isnan(self.cfg.conn.hw[ch]):
-                f.write("'%.5g %s' " % (self.cfg.conn.scale[ch],
-                                     self.cfg.conn.units[ch]))
+                f.write(f"'{self.cfg.conn.scale[ch]:.5g} {self.cfg.conn.units[ch]}'\n")
         f.write("}\n")
         sweep_s = self.cfg.hori.s_div*(self.cfg.hori.xlim[1]-
                                        self.cfg.hori.xlim[0])
         sweep_scans = int(sweep_s * self.cfg.hw.acqrate.value)
-        f.write("scans_per_sweep = " + `sweep_scans` + "\n");
-        f.write("sweepperiod_s = " + ("%.6g" % sweep_s) + "\n");
+        f.write(f"scans_per_sweep = {sweep_scans}\n");
+        f.write(f"sweepperiod_s = {sweep_s:.6g}\n");
                                            
         f.close()
 
@@ -376,10 +376,10 @@ class MainWin(QWidget):
         f.close()
 
     def saveSweep(self):
-        if self.apane.dat==None:
+        if self.apane.dat is None:
             return # Nothing to save
         dat = self.apane.dat[:self.apane.write_idx,:]
-        name = self.rundate + "-" + ("%03i"%self.sweepno)
+        name = f"{self.rundate}-{self.sweepno:03i}"
         f = open(name + ".dat", "wb")
         f.write(dat)
         f.close()
@@ -394,19 +394,19 @@ class MainWin(QWidget):
                                            os.getcwd(),
                                            "EScope files (*.escope)")
         if name:
-            m = re.search("(\d{8}-\d{6})-(\d{3})\.escope$", name)
+            m = re.search(r"(\d{8}-\d{6})-(\d{3})\.escope$", name)
             if m:
                 rundate = m.group(1)
                 sweepno = int(m.group(2))
             else:
                 sweepno = None
-                m = re.search("(\d{8}-\d{6})\.escope$", name)
+                m = re.search(r"(\d{8}-\d{6})\.escope$", name)
                 if m:
                     rundate = m.group(1)
                 else:
                     rundate = "???-???"
                     
-            wasRunning = self.ds!=None
+            wasRunning = self.ds is not None
             if wasRunning:
                 self.stopRun()
             f = open(name,"rb")
@@ -424,7 +424,7 @@ class MainWin(QWidget):
             f.seek(-nfloats*8,os.SEEK_END) # Ugly hardcoded sizeof(double)
             dat = np.fromfile(f,count = nfloats)
             nend = f.tell()
-            if sweepno==None:
+            if sweepno is None:
                 sweepno = int(nend/nfloats/8)
             f.close()
             dat = dat.reshape((len(dat)/nch, nch))
@@ -433,11 +433,11 @@ class MainWin(QWidget):
             self.cfg.trig = cfg.trig
             self.cfg.vert = cfg.vert
             self.cfg.hori = cfg.hori
-            if self.h_hw!=None and self.h_hw.isVisible():
+            if self.h_hw is not None and self.h_hw.isVisible():
                 self.h_hw.reconfig()
-            if self.h_chn!=None and self.h_chn.isVisible():
+            if self.h_chn is not None and self.h_chn.isVisible():
                 self.h_chn.reconfig()
-            if self.h_trig!=None and self.h_trig.isVisible():
+            if self.h_trig is not None and self.h_trig.isVisible():
                 self.h_trig.reconfig()
             self.apane.forceFeed(dat)
             self.update()
@@ -448,12 +448,12 @@ class MainWin(QWidget):
 
     def click_savesweep(self):
         self.saveSweep()
-        if not self.apane.sweepIsComplete() and self.ds!=None:
+        if not self.apane.sweepIsComplete() and self.ds is not None:
             self.saveSweepRequested = True
 
     def click_about(self):
         abt = QMessageBox()
-        abt.setText("EScope v. 1.0\n(C) Daniel Wagenaar 2010")
+        abt.setText("EScope v. 2.0\n(C) Daniel Wagenaar 2010, 2023")
         abt.setWindowTitle("About EScope")
         abt.exec_()
 
@@ -464,7 +464,7 @@ class MainWin(QWidget):
         QApplication.quit()
 
 if __name__=='__main__':
-    print 'This is EScope'
+    print('This is EScope')
     app = QApplication(sys.argv)
     cfg = esconfig.basicconfig()
     # cfg.trig.enable = True

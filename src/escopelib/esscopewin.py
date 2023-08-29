@@ -1,190 +1,74 @@
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 
 import numpy as np
 import sys
 
-import esconfig
+from . import esconfig
 
-try:
-    import scipy.weave as weave
-    x=[0]
-    y=[1]
-    code = '''
-    int i = 0;
-    x[i] = y[i];
-    '''
-    
-    print 'testing weave',x,y
-    weave.inline(code,['x','y'])
-    print 'done testing',x,y
-    assert x[0]==1
-    
-    def trueblue(xx, ichn, stride, yminmax):
-        '''Find min and max in bins
-    
-        yminmax is an output array.'''
-        X = len(xx)
-        Y = len(yminmax)/2
-    
-        code = '''
-        int i, j;
-        int stri = stride;
-        int dich = ichn;
-        double *dxx = xx;
-        dxx += dich;
-        double *ymn = yminmax;
-        double *ymx = ymn + Y;
-        int ix0, ix1;
-        double mn, mx;
-        for (i=0; i<Y; i++) {
-          ix0 = i*X/Y;
-          ix1 = (i+1)*X/Y;
-          if (ix1==ix0)
-            ix1++;
-          ix0*=stri;
-          ix1*=stri;
-          mn = mx = dxx[ix0];
-          for (j=ix0; j<ix1; j+=stri) {
-            if (dxx[j]>mx)
-              mx = dxx[j];
-            else if (dxx[j]<mn)
-              mn = dxx[j];
-          }
-          ymn[i] = mn;
-          ymx[Y-i-1] = mx;
-        }
-        '''
-        weave.inline(code,['X','Y','xx','yminmax','ichn','stride'])
+from numba import jit
 
-    def sample(xx, ichn, stride, yout):
-        X = len(xx)
-        Y = len(yout)
-        code = '''
-        int i, j;
-        int stri = stride;
-        int dich = ichn;
-        double *dxx = xx;
-        dxx += dich;
-        double *yo = yout;
-        int ix0, ix1;
-        double smx;
-        int nx;
-        for (i=0; i<Y; i++) {
-          ix0 = i*X/Y;
-          ix1 = (i+1)*X/Y;
-          if (ix1==ix0)
-            ix1++;
-          nx = ix1-ix0;
-          ix0*=stri;
-          ix1*=stri;
-          smx = 0;
-          for (j=ix0; j<ix1; j+=stri)
-            smx += dxx[j];
-          yo[i] = smx/nx;
-        }
-        '''
-        weave.inline(code,['X','Y','xx','yout','ichn','stride'])
+@jit
+def trueblue(xx, ichn, stride, yy):
+    X = xx.shape[0]
+    Y = len(yy)//2
+    if Y==0 or X==0:
+        return
+    i0 = 0
+    for k in range(Y):
+        i1 = (k+1)*X//Y
+        ymin = xx[i0, ichn]
+        ymax = ymin
+        for n in range(i0+1, i1):
+            x = xx[n,ichn]
+            if x < ymin:
+                ymin = xx[n, ichn]
+            elif x>ymax:
+                ymax = x
+        yy[k] = ymin
+        yy[2*Y-1-k] = ymax
+        i0 = i1
 
-    def limpoly1(yy, ymin, ymax):
-        '''Drop pieces of a polygon that go off screen'''
-        Y = len(yy)
-        code = '''
-        int n = Y;
-        double *y_ = yy;
-        double ymin_ = ymin;
-        double ymax_ = ymax;
-        while (n>0) {
-          if (*y_<=ymin_) 
-            *y_ = ymin_;
-            else if (*y_>=ymax_)
-            *y_ = ymax_;
-          y_++;
-          n--;
-        }
-        '''
-        weave.inline(code,['Y','yy','ymin','ymax'])
 
-    def limpoly2(yy, ymin, ymax):
-        '''Drop pieces of a polygon that go off screen'''
-        Y = len(yy)/2
-        code = '''
-        int n = Y;
-        double *ymn = yy;
-        double *ymx = yy + 2*Y-1;
-        double ymin_ = ymin;
-        double ymax_ = ymax;
-        while (n>0) {
-          if (*ymn<=ymin_) 
-            *ymn = *ymx = ymin_;
-          else if (*ymx>=ymax_)
-            *ymn = *ymx = ymax_;
-          ymn++;
-          ymx--;
-          n--;
-        }
-        '''
-        weave.inline(code,['Y','yy','ymin','ymax'])
+def sample(xx, ichn, stride, yy):
+    X = xx.shape[0]
+    Y = len(yy)
+    if Y==0 or X==0:
+        return
+    xi = np.array(np.floor(np.arange(Y+1)*X/Y),dtype=int)
+    yy[:Y] = xx[xi[:-1],ichn]
 
-    print '(Using C/Weave version of trueblue)'
-except:
-    def trueblue(xx, ichn, stride, yy):
-        X = xx.shape[0]
-        Y = len(yy)/2
-        if Y==0 or X==0:
-            return
-        xi = np.array(np.floor(np.arange(Y+1)*X/Y),dtype=int)
-        yy[:Y] = xx[xi[:-1],ichn]
-        yy[2*Y-1:Y-1:-1] = yy[:Y]
-        if Y<0*X:
-            for k in range(Y):
-                if xi[k+1]>xi[k]+1:
-                    yy[k] = np.min(xx[xi[k]:xi[k+1],ichn])
-                    yy[2*Y-1-k] = np.max(xx[xi[k]:xi[k+1],ichn])
 
-    def sample(xx, ichn, stride, yy):
-        X = xx.shape[0]
-        Y = len(yy)
-        if Y==0 or X==0:
-            return
-        xi = np.array(np.floor(np.arange(Y+1)*X/Y),dtype=int)
-        yy[:Y] = xx[xi[:-1],ichn]
+@jit    
+def limpoly1(yy, ymin, ymax):
+    Y = len(yy)
+    Y2 = len(yy)-1
+    for k in range(Y):
+        if yy[k]<=ymin:
+            yy[k] = ymin
+        elif yy[k]>=ymax:
+            yy[k] = ymax
 
-    def limpoly1(yy, ymin, ymax):
-        Y = len(yy)
-        Y2 = len(yy)-1
-        for k in range(Y):
-            if yy[k]<=ymin:
-                yy[k] = ymin
-            elif yy[k]>=ymax:
-                yy[k] = ymax
 
-    def limpoly2(yy, ymin, ymax):
-        Y = len(yy)/2
-        Y2 = len(yy)-1
-        for k in range(Y):
-            if yy[k]<=ymin:
-                yy[k] = ymin
-                yy[Y2-k] = ymin
-            elif yy[Y2-k]>=ymax:
-                yy[k] = ymax
-                yy[Y2-k] = ymax
-    
-    print '(Using Python version of trueblue)'
+@jit
+def limpoly2(yy, ymin, ymax):
+    Y = len(yy)/2
+    Y2 = len(yy)-1
+    for k in range(Y):
+        if yy[k]<=ymin:
+            yy[k] = ymin
+            yy[Y2-k] = ymin
+        elif yy[Y2-k]>=ymax:
+            yy[k] = ymax
+            yy[Y2-k] = ymax
 
-#def toint(x):
-#    x=int(x)
-#    if x>0x7fffffff:
-#        return 0x7fffffff
-#    if x<-0x7fffffff:
-#        return -0x7fffffff
-#    return x
 
 def mkpoly(xx,yy,offset,scale, hp):
     #print 'mkpoly', offset, scale
     poly = QPolygon(len(xx))
     for k in range(len(xx)):
-        poly.setPoint(k,xx[k],offset+scale*yy[k])
+        poly.setPoint(k, int(xx[k]), int(offset+scale*yy[k]))
     return poly
 
 class ESScopeWin(QWidget):
@@ -237,19 +121,19 @@ class ESScopeWin(QWidget):
             xp = wp*(x-x0)/(x1-x0)
             if xp>=wp:
                 xp=wp-1
-            p.drawLine(xp,0,xp,hp)
+            p.drawLine(int(xp), 0, int(xp), int(hp))
         for y in np.arange(y0,y1+1e-10):
             yp = hp * (1 - (y-y0)/(y1-y0))
             if yp>=hp:
                 yp=hp-1
-            p.drawLine(0,yp,wp,yp)
+            p.drawLine(0, int(yp), int(wp), int(yp))
         pn.setStyle(Qt.SolidLine)
         p.setPen(pn)
         yp = hp * (1 - (0.-y0)/(y1-y0))
-        p.drawLine(0,yp,wp,yp)
+        p.drawLine(0, int(yp), int(wp), int(yp))
 
         # Draw traces
-        if self.write_idx>0 and self.dat!=None:
+        if self.write_idx is not None and self.write_idx>0 and self.dat is not None:
             nchan = self.dat.shape[1]
             w = self.width()
             sweep_s = self.cfg.hori.s_div * (self.cfg.hori.xlim[1] -
@@ -287,23 +171,23 @@ class ESScopeWin(QWidget):
                 neededLength = 2*(x1-x0)
             else:
                 neededLength = (x1-x0)
-            if self.xx==None or (len(self.xx)>0 and self.xx[0]!=x0) \
+            if self.xx is None or (len(self.xx)>0 and self.xx[0]!=x0) \
                    or len(self.xx)!=2*(x1-x0):
                 if self.dispStyle==2:
                     self.xx = np.hstack((np.arange(x0,x1),
                                          np.arange(x1-1,x0-1,-1)))
                 else:
                     self.xx = np.arange(x0,x1)
-            if self.yy==None:
+            if self.yy is None:
                 self.yy = [None] * nchan
             for k in range(nchan):
-                if self.yy[k]==None or len(self.yy[k])!=len(self.xx):
+                if self.yy[k] is None or len(self.yy[k])!=len(self.xx):
                     self.yy[k] = np.zeros(self.xx.shape)
                 if self.dispStyle==2:
-                    trueblue(self.dat[i0:i1,:], k,nchan, self.yy[k])
+                    trueblue(self.dat[i0:i1,:], k, nchan, self.yy[k])
                 else:
                     sample(self.dat[i0:i1,:], k, nchan, self.yy[k])
-        if self.yy!=None:
+        if self.yy is not None:
             for k in range(len(self.yy)):
                 p.setBrush(self.cc[k])
                 p.setPen(self.cc[k])
@@ -327,6 +211,7 @@ class ESScopeWin(QWidget):
                 else:
                     # True blue
                     p.drawPolygon(poly)
+        p.end()
 
     def resizeEvent(self, evt):
         self.yy = None
@@ -362,7 +247,7 @@ class ESScopeWin(QWidget):
                 nch += 1
         per_s = self.cfg.hori.s_div * (self.cfg.hori.xlim[1] -
                                        self.cfg.hori.xlim[0])
-        self.dat = np.zeros((per_s*self.cfg.hw.acqrate.value, nch))
+        self.dat = np.zeros((int(per_s*self.cfg.hw.acqrate.value), nch))
         self.write_idx = 0
         self.read_idx = 0
         if src:
@@ -379,7 +264,8 @@ class ESScopeWin(QWidget):
         self.feedData()
 
     def sweepIsComplete(self):
-        return self.dat!=None and self.write_idx>=self.dat.shape[0]
+        #print("sweepiscomplete", self.write_idx, self.dat.shape)
+        return self.dat is not None and self.write_idx>=self.dat.shape[0]
 
     def feedData(self):
         #lock = QMutexLocker(self.mutex)
@@ -424,7 +310,7 @@ if __name__ == '__main__':
         xx = np.random.rand(1000,1)
         ymin = np.zeros(20)
         trueblue(xx,0,1,ymin)
-        print ymin
+        print(ymin)
 
     app = QApplication(sys.argv)
     cfg = esconfig.basicconfig()

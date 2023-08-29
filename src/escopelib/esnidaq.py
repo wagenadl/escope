@@ -60,13 +60,13 @@ def CHK(err, th=None):
         nidaq.DAQmxGetErrorString(err, ctypes.byref(buf), 500)
         exc = RuntimeError('NIDAQ call failed with error %d: %s' %
                            (err, repr(buf.value)))
-        if th!=None:
+        if th is not None:
             nidaq.DAQmxTaskControl(th,DAQmx_Val_Task_Abort)
         raise exc
 
 # ----------------------------------------------------------------------
 def taskNames():
-    if nidaq==None:
+    if nidaq is None:
         return []
     buf = mkBuf(2000)
     err = nidaq.DAQmxGetSysTasks(ctypes.byref(buf), 2000)
@@ -76,7 +76,7 @@ def taskNames():
     return devs.split(', ')
     
 def deviceList():
-    if nidaq==None:
+    if nidaq is None:
         return []
     buf = mkBuf(2000)
     err = nidaq.DAQmxGetSysDevNames(ctypes.byref(buf), 2000)
@@ -125,17 +125,17 @@ def assert_none_prepped(newid=None):
         dq = contacq_collection[a]
         thisbad = False
         if dq.prepped:
-            print 'DAQ', a, 'prepped'
+            print('DAQ', a, 'prepped')
             thisbad = True
         if dq.th:
-            print 'DAQ', a, 'has nonzero taskhandle'
+            print('DAQ', a, 'has nonzero taskhandle')
             thisbad = True
         if thisbad:
             dq.stop()
             dq.unprep()
             good = False
-    if not good and newid!=None:
-        print '(while working on DAQ', newid, ')'
+    if not good and newid is not None:
+        print('(while working on DAQ', newid, ')')
         
 
 EVERYNFUNC = ctypes.CFUNCTYPE(int32, TaskHandle, int32, uInt32,
@@ -183,7 +183,7 @@ class ContAcqTask:
         assert_none_prepped(contacq_nextid)
         self.collectionid = contacq_nextid
         contacq_nextid += 1
-        if nidaq==None:
+        if nidaq is None:
             raise AttributeError('No NIDAQ library found')
         self.th = TaskHandle(0)
         CHK(nidaq.DAQmxCreateTask("foo",ctypes.byref(self.th)))
@@ -208,7 +208,7 @@ class ContAcqTask:
                                             DAQmx_Val_Rising,
                                             DAQmx_Val_ContSamps,
                                             uInt64(self.nscans)))
-            if self.foo!=None:
+            if self.foo is not None:
                 CHK(nidaq.DAQmxRegisterEveryNSamplesEvent(self.th,
                                                           DAQmx_Val_Acquired_Into_Buffer,
                                                           self.nscans,
@@ -216,12 +216,12 @@ class ContAcqTask:
                                                           EveryNCallback_func,
                                                           25))
         except RuntimeError as e:
-            print 'Preparation failed:', e
+            print('Preparation failed:', e)
             try:
                 if nidaq:
                     CHK(nidaq.DAQmxClearTask(self.th))
             except RunTimeError as e:
-                print 'Double failure:', e
+                print('Double failure:', e)
             self.th = None
             self.collectionid = None
         else:
@@ -233,7 +233,7 @@ class ContAcqTask:
         if not self.prepped:
             self.prep()
         if not self.prepped:
-            print 'Failed to prepare, cannot run'
+            print('Failed to prepare, cannot run')
             return
         if self.running:
             return
@@ -314,7 +314,7 @@ class FiniteProdTask:
             return
         self.collectionid = finiteprod_nextid
         finiteprod_nextid += 1
-        if nidaq==None:
+        if nidaq is None:
             raise AttributeError('No NIDAQ library found')
         self.th = TaskHandle(0)
         CHK(nidaq.DAQmxCreateTask("",ctypes.byref(self.th)))
@@ -325,15 +325,15 @@ class FiniteProdTask:
                                                float64(-10.0),float64(10.0),
                                                DAQmx_Val_Volts, None))
             self.nchans += 1
-        print 'genrate is ', self.genrate_hz
-        print 'shape is ', self.data.shape[0]
+        print('genrate is ', self.genrate_hz)
+        print('shape is ', self.data.shape[0])
         CHK(nidaq.DAQmxCfgSampClkTiming(self.th,"",
                                         float64(self.genrate_hz),
                                         DAQmx_Val_Rising,
                                         DAQmx_Val_FiniteSamps,
                                         uInt64(self.data.shape[0])))
         CHK(nidaq.DAQmxCfgOutputBuffer(self.th,uInt32(self.data.shape[0])))
-        if self.foo!=None:
+        if self.foo is not None:
             CHK(nidaq.DAQmxRegisterDoneEvent(self.th, 0,
                                              DoneCallback_func,
                                              self.collectionid))
@@ -387,6 +387,6 @@ class FiniteProdTask:
                 # if this unprep is due to program exit
                 del finiteprod_collection[self.collectionid]
             self.collectionid = None
-            if nidaq!=None and self.th!=None:
+            if nidaq is not None and self.th is not None:
                 CHK(nidaq.DAQmxClearTask(self.th))
             self.th = None

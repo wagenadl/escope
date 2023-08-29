@@ -1,10 +1,11 @@
 # espconfig.py - Basic configuration parameters for espark
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 import sys
 import numpy as np
-import esnidaq
+from . import esnidaq
 import time
 
 from Struct import Struct
@@ -51,7 +52,7 @@ class Pulsetype:
         elif self.value==self.SINE:
             return 'SINE'
         else:
-            return `self.value`
+            return f"{self.value}"
     def have1dur(self):
         return self.value in [self.MONOPHASIC,
                              self.BIPHASIC,
@@ -208,7 +209,7 @@ def outputchannels(ada):
     if typ=='dummy':
         chs = []
         for k in range(4):
-            chs.append('ao' + `k`)
+            chs.append(f'ao{k}')
     elif typ=='nidaq':
         dev = ada[1]
         chs = esnidaq.devAOChannels(dev)
@@ -288,6 +289,8 @@ def mktiming(cfg, k):
     Npu = cfg.train[k].npulses.base
     if cfg.train[k].npulses.delta>0:
         Npu += cfg.train[k].npulses.delta * (ntr-1)
+    ntr = int(ntr)
+    Npu = int(Npu)
     tstart_s=np.zeros((ntr, Npu))
     tend_s=np.zeros((ntr, Npu))
     
@@ -364,7 +367,7 @@ def fillpulse(cfg, k, itr, ipu, vv):
         tt = np.arange(dur1)
         vv[:dur1] = amp1*np.sin(2*np.pi*(tt-dur2)/dur1)+amp2
     else:
-        raise ValueError('Unknown pulsetype: ' + `typ`)
+        raise ValueError(f'Unknown pulsetype: {typ}')
 
 def mkpulse(cfg, k, itr, ipu):
     fs_hz = cfg.hw.genrate.value

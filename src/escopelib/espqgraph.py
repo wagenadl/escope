@@ -139,9 +139,9 @@ class ESPGraph(QWidget):
         t1 = self.tlim[1]
         v0 = self.vlim[0]
         v1 = self.vlim[1]
-        if self.xx==None or len(self.xx)!=N:
+        if self.xx is None or len(self.xx)!=N:
             self.xx = [None] * N
-        if self.yy==None or len(self.yy)!=N:
+        if self.yy is None or len(self.yy)!=N:
             self.yy = [None] * N
         for k in range(N):
             t0k = self.tdat[k][0]
@@ -149,11 +149,11 @@ class ESPGraph(QWidget):
             t1k = self.tdat[k][-1]+dtk
             x0k = int(self.t2x(t0k))
             x1k = int(self.t2x(t1k))
-            if self.xx[k]==None:
+            if self.xx[k] is None:
                 self.xx[k] = np.hstack((np.arange(x0k,x1k),
                                         np.arange(x1k-1,x0k-1,-1)))
             L = len(self.xx[k])/2
-            if self.yy[k]==None:
+            if self.yy[k] is None:
                 self.yy[k] = np.zeros(self.xx[k].shape)
                 trueblue(self.vdat[k], self.yy[k])
                 for i in range(1,L):

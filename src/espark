@@ -1,9 +1,10 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 
 # espark.py
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 import sys
 import os
 import re
@@ -44,7 +45,7 @@ class MainWin(QWidget):
         scrw = scr.screenGeometry().width()
         scrh = scr.screenGeometry().height()
         self.resize(700,700)
-        self.move(scrw/2-self.width()/2,scrh/2-self.width()/2)
+        self.move(scrw//2-self.width()//2,scrh//2-self.width()//2)
 
     def makeContents(self):
         hw = QPushButton(self)
@@ -332,7 +333,7 @@ class MainWin(QWidget):
     
     def click_hardware(self):
         pass
-        if self.h_hw==None:
+        if self.h_hw is None:
             self.h_hw = ESPHardware(self.cfg)
             self.h_hw.cfgChanged.connect(self.hwChanged)
         self.h_hw.reconfig()
@@ -343,7 +344,7 @@ class MainWin(QWidget):
             self.rebuildGraphs(k)
             
     def click_channels(self):
-        if self.h_chn==None:
+        if self.h_chn is None:
             self.h_chn = ESPChannels(self.cfg)
             self.h_chn.cfgChanged.connect(self.chnChanged)
         self.h_chn.reconfig()
@@ -394,7 +395,7 @@ class MainWin(QWidget):
         self.h_run.setChecked(False)
         self.ds = None
         if rep and chk:
-            self.startTimer(self.cfg.train[0].period_s.base*1000)
+            self.startTimer(int(self.cfg.train[0].period_s.base*1000))
 
     def timerEvent(self, evt):
         self.killTimer(evt.timerId())
@@ -403,7 +404,7 @@ class MainWin(QWidget):
 
     def click_about(self):
         abt = QMessageBox()
-        abt.setText("ESpark v. 1.0\n(C) Daniel Wagenaar 2010")
+        abt.setText("ESpark v. 2.0\n(C) Daniel Wagenaar 2010, 2023")
         abt.setWindowTitle("About ESpark")
         abt.exec_()
 
@@ -412,6 +413,7 @@ class MainWin(QWidget):
                                            "Save Configuration",
                                            os.getcwd(),
                                            "ESpark files (*.espark)")
+        name = name[0]
         if not name:
             return
         if not name.endswith('.espark'):
@@ -425,6 +427,7 @@ class MainWin(QWidget):
                                            "Load Configuration",
                                            os.getcwd(),
                                            "ESpark files (*.espark)")
+        name = name[0]
         if not name:
             return
 

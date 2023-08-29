@@ -1,8 +1,9 @@
 # esptypebox.py
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-import espconfig
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+from . import espconfig
 
 class ESPTypeBox(QComboBox):
     userChanged = pyqtSignal(str, int)

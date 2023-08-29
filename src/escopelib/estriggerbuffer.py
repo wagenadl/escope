@@ -1,14 +1,14 @@
 # estriggerbuffer.py
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
 import sys
-import esconfig
+from . import esconfig
 import numpy as np
 import ctypes
-from esdatasource import ESDataSource
-from esdatasource import ESDS_Dummy
-from esdsnidaq import ESDS_Nidaq
+from .esdatasource import ESDataSource
+from .esdatasource import ESDS_Dummy
+from .esdsnidaq import ESDS_Nidaq
 
 PRIMELIM = 10 # Number of samples of continuously-below-trigger required
 
@@ -64,7 +64,7 @@ class ESTriggerBuffer(ESDataSource):
         self.source.reconfig()
         per_s = self.cfg.hori.s_div * (self.cfg.hori.xlim[1] -
                                        self.cfg.hori.xlim[0])
-        self.per_scans = per_s*self.cfg.hw.acqrate.value
+        self.per_scans = int(per_s*self.cfg.hw.acqrate.value)
         self.buffer = np.zeros((3*self.per_scans, self.nchan))
         # print self.buffer.shape, per_s, self.cfg.hw.acqrate.value, self.nchan
         self.write_idx = 0
@@ -100,7 +100,7 @@ class ESTriggerBuffer(ESDataSource):
         nrows = self.source.getData(self.buffer[relidx:,:])
         self.write_idx += nrows
         if self.cfg.trig.enable:
-            if self.trig_idx!=None:
+            if self.trig_idx is not None:
                 #lock = None
                 self.dataAvailable.emit()
                 #lock = QMutexLocker(self.mutex)
@@ -144,7 +144,7 @@ class ESTriggerBuffer(ESDataSource):
                                 self.nexttrigok_idx = self.trig_idx + self.per_scans
                                 break
                             k += 1
-                if self.trig_idx==None:
+                if self.trig_idx is None:
                     if origidx>=self.nextautotrig_idx:
                         dx = self.nextautotrig_idx-self.read_idx
                         if dx<self.pretrig_scans:
@@ -171,7 +171,7 @@ class ESTriggerBuffer(ESDataSource):
     def getData(self, dst):
         #lock = QMutexLocker(self.mutex)
         if self.cfg.trig.enable:
-            if self.trig_idx==None:
+            if self.trig_idx is None:
                 now = 0
             else:
                 now = min(self.write_idx-self.read_idx,
@@ -218,9 +218,9 @@ if __name__ == "__main__":
     def rcv():
         global dst
         n = ds.getData(dst)
-        print "Recv!", dst.ctypes.data
-        print np.mean(dst,0)
-        print np.std(dst,0)
+        print("Recv!", dst.ctypes.data)
+        print(np.mean(dst,0))
+        print(np.std(dst,0))
         
     ds.trigAvailable.connect(rcv)
     ds.dataAvailable.connect(rcv)

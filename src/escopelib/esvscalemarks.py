@@ -1,9 +1,10 @@
 # esvzeromarks.py
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 import sys
-import esconfig
+from . import esconfig
 import numpy as np
 
 def limscale(scl):
@@ -16,7 +17,7 @@ def limscale(scl):
 def mkpoly(xx,yy):
     poly = QPolygon(len(xx))
     for k in range(len(xx)):
-        poly.setPoint(k,xx[k],yy[k])
+        poly.setPoint(k, int(xx[k]), int(yy[k]))
     return poly
 
 ESV_TRIGLEVEL = 1001
@@ -77,25 +78,25 @@ class ESVScaleMarks(QWidget):
                 pn.setColor(self.cfg.colors[k])
                 p.setPen(pn)
                 yp = hp * (1 - (self.yy[k]-y0)/(y1-y0))
-                p.drawLine(5,yp+self.divp/2.,5,yp-self.divp/2.)
+                p.drawLine(5, int(yp+self.divp/2.), 5, int(yp-self.divp/2.))
                 self.yp[k]=yp
                 if self.tracking==k:
                     scl = self.scl
                 else:
                     scl = self.cfg.vert.unit_div[k]
-                p.drawText(10, yp-10, 100, 20,
+                p.drawText(10, int(yp-10), 100, 20,
                            Qt.AlignVCenter,
                            esconfig.niceunit(scl * self.cfg.conn.scale[k],
                                              self.cfg.conn.units[k]))
 
     def wheelEvent(self,evt):
         k = self.wheeling
-        if k==None:
+        if k is None:
             evt.ignore()
             return
 
         if k==ESV_TRIGLEVEL:
-            delta=evt.delta()
+            delta=evt.angleDelta().y()
             if delta!=0:
                 y = self.cfg.trig.level_div + delta/120./2.
                 if y<self.cfg.vert.ylim[0]:
@@ -105,10 +106,10 @@ class ESVScaleMarks(QWidget):
                 if y!=self.cfg.trig.level_div:
                     self.cfg.trig.level_div = y
                     self.update()
-                    print 'Trigger level changed to %.1f divisions' % y
+                    print(f'Trigger level changed to {y:.1f} divisions')
                     self.trigChanged.emit()
         else:
-            self.delta_accum = self.delta_accum + evt.delta()/120./2.
+            self.delta_accum = self.delta_accum + evt.angleDelta().y()/120./2.
             scl = self.cfg.vert.unit_div[k]
             while self.delta_accum>=1:
                 scl = esconfig.scale125(scl,1)
@@ -125,7 +126,7 @@ class ESVScaleMarks(QWidget):
 
     def mouseDoubleClickEvent(self,evt):
         k = self.wheeling
-        if k==None:
+        if k is None:
             return
         if k==ESV_TRIGLEVEL:
             if evt.button()==Qt.RightButton:
@@ -142,8 +143,8 @@ class ESVScaleMarks(QWidget):
         if self.cfg.trig.enable and abs(y-self.yp_trig)<self.dyp_trig:
             k = ESV_TRIGLEVEL
         else:        
-            k = np.argmin(abs(self.yp-y))
-            if abs(self.yp[k]-y)>self.divp:
+            k = np.nanargmin((self.yp-y)**2)
+            if abs(self.yp[k]-y) > self.divp:
                 k=None
         self.tracking = k
         self.wheeling = k
@@ -152,7 +153,7 @@ class ESVScaleMarks(QWidget):
             self.tracky0 = y
             self.trackystart = self.yp_trig
             self.tracky = self.trackystart
-        elif k!=None:
+        elif k is not None:
             self.tracky0 = y
             self.scl0 = self.cfg.vert.unit_div[k]
             self.scl = self.scl0
@@ -166,14 +167,14 @@ class ESVScaleMarks(QWidget):
             elif self.tracky>=self.height():
                 self.tracky=self.height()-1
             self.update()
-        elif self.tracking!=None:
+        elif self.tracking is not None:
             dscl = (evt.y()-self.tracky0) / self.divp
             self.scl = limscale(esconfig.scale125(self.scl0, -dscl))
             self.update()
 
     def mouseReleaseEvent(self,evt):
         k = self.tracking
-        if k==None:
+        if k is None:
             return
         
         self.tracking = None
@@ -193,7 +194,7 @@ class ESVScaleMarks(QWidget):
             self.cfg.trig.level_div = y
             self.update()
             if must_emit:
-                print 'Trigger level changed to %.1f divisions' % y
+                print(f'Trigger level changed to {y:.1f} divisions')
                 self.trigChanged.emit()
         else:
             dscl = (evt.y()-self.tracky0) / self.divp

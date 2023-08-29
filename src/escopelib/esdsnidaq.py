@@ -1,13 +1,15 @@
 # esdsnidaq.py
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+
 import sys
-import esconfig
+from . import esconfig
 import numpy as np
 import ctypes
-from esdatasource import ESDataSource
-import esnidaq
+from .esdatasource import ESDataSource
+from . import esnidaq
 
 class ESDS_Nidaq(ESDataSource):
     def __init__(self, cfg):
@@ -27,7 +29,7 @@ class ESDS_Nidaq(ESDataSource):
                                                    self.range)
 
     def run(self):
-        if self.acqtask==None:
+        if self.acqtask is None:
             raise RuntimeError('ESDSNidaq: Cannot run w/o prior configuration')
         self.acqtask.setCallback(self.feedData,
                                  self.period_scans)
@@ -44,7 +46,7 @@ class ESDS_Nidaq(ESDataSource):
         self.acqtask.unprep()
 
     def feedData(self, nsamp):
-        print 'esdsnidaq.feedData: nsamp =', nsamp
+        print('esdsnidaq.feedData: nsamp =', nsamp)
         self.dataAvailable.emit()        
 
     def getData(self, dst):

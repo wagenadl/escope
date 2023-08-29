@@ -1,9 +1,10 @@
 # estmarks.py
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 import sys
-import esconfig
+from . import esconfig
 import numpy as np
 
 def limscale(scl):
@@ -16,7 +17,7 @@ def limscale(scl):
 def mkpoly(xx,yy):
     poly = QPolygon(len(xx))
     for k in range(len(xx)):
-        poly.setPoint(k,xx[k],yy[k])
+        poly.setPoint(k,int(xx[k]),int(yy[k]))
     return poly
 
 EST_TIMESCALE = 1
@@ -64,7 +65,7 @@ class ESTMarks(QWidget):
             p.setBrush(QColor("black"))
         p.drawPolygon(mkpoly([xp, xp+sclh, xp-sclh],
                              [hp-sclh*2,hp-1,hp-1]))
-        p.drawLine(xp,0,xp,hp-sclh*2)
+        p.drawLine(int(xp), 0, int(xp), int(hp-sclh*2))
         self.xp_trig = xp
         self.dxp_trig = sclh
             
@@ -72,24 +73,24 @@ class ESTMarks(QWidget):
         pn.setWidth(2)
         p.setPen(pn)
         xp = wp * (x1-.5-x0)/(x1-x0)
-        p.drawLine(xp+self.divp/2.,5,xp-self.divp/2.,5)
+        p.drawLine(int(xp+self.divp/2.), 5, int(xp-self.divp/2.), 5)
         self.xp_time = xp
         if self.tracking==EST_TIMESCALE:
             scl = self.scl
         else:
             scl = self.cfg.hori.s_div
-        p.drawText(xp-50, 10, 100, 20,
+        p.drawText(int(xp)-50, 10, 100, 20,
                    Qt.AlignHCenter | Qt.AlignTop,
                    esconfig.niceunit(scl,'s'))
 
     def wheelEvent(self,evt):
         k = self.wheeling
-        if k==None:
+        if k is None:
             evt.ignore()
             return
 
         if k==EST_TIMESCALE:
-            self.delta_accum = self.delta_accum + evt.delta()/120./2.
+            self.delta_accum = self.delta_accum + evt.angleDelta().y()/120./2.
             scl = self.cfg.hori.s_div
             
             while self.delta_accum>=1:
@@ -117,13 +118,13 @@ class ESTMarks(QWidget):
                 if t!=self.cfg.trig.delay_div:
                     self.cfg.trig.delay_div = t
                     self.update()
-                    print 'Trigger delay changed to %.1f divisions' % t
+                    print(f'Trigger delay changed to {t:.1f} divisions')
                     self.trigChanged.emit()
 
     def mousePressEvent(self,evt):
         x=evt.x()
 
-        if self.xp_trig!=None and abs(self.xp_trig-x)<self.dxp_trig:
+        if self.xp_trig is not None and abs(self.xp_trig-x)<self.dxp_trig:
             k = EST_TRIGDELAY
         elif abs(self.xp_time-x)<self.divp/2:
             k = EST_TIMESCALE
@@ -166,7 +167,7 @@ class ESTMarks(QWidget):
 
     def mouseReleaseEvent(self,evt):
         k = self.tracking
-        if k==None:
+        if k is None:
             return
         
         self.tracking = None
@@ -194,7 +195,7 @@ class ESTMarks(QWidget):
             self.cfg.trig.delay_div = x
             self.update()
             if must_emit:
-                print 'Trigger delay changed to %.1f divisions' % x
+                print('Trigger delay changed to {x:.1f} divisions')
                 self.trigChanged.emit()
  
 if __name__ == "__main__":

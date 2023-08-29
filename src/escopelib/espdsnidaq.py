@@ -1,11 +1,11 @@
 # espdsnidaq - data sink for nidaq
 
-from espdatasink import ESPDataSink
+from .espdatasink import ESPDataSink
 import sys
-import espconfig
+from . import espconfig
 import numpy as np
 import ctypes
-import esnidaq
+from . import esnidaq
 
 class ESPDS_Nidaq(ESPDataSink):
     def __init__(self, cfg):
@@ -24,7 +24,7 @@ class ESPDS_Nidaq(ESPDataSink):
 
     def run(self):
         #print 'espds: run'
-        if self.gentask==None:
+        if self.gentask is None:
             raise RuntimeError('ESPDS_Nidaq: Cannot run w/o prior configuration')
         self.gentask.setCallback(self.genDone)
         self.gentask.prep()

@@ -1,10 +1,11 @@
 # espchannels.py
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 import sys
 import numpy as np
-import espconfig
+from . import espconfig
 
 
 class ESPChannels(QWidget):
@@ -87,7 +88,7 @@ class ESPChannels(QWidget):
             if np.isnan(self.cfg.conn.hw[k]):
                 self.h_chn[k].setCurrentIndex(self.h_chn[k].count()-1)
             else:
-                self.h_chn[k].setCurrentIndex(self.cfg.conn.hw[k])
+                self.h_chn[k].setCurrentIndex(int(self.cfg.conn.hw[k]))
 
     def buildScales(self):
         for k in range(self.cfg.MAXCHANNELS):
@@ -101,7 +102,7 @@ class ESPChannels(QWidget):
                 self.h_scl[k].setCurrentIndex(items.index(scl[0]))
             else:
                 self.h_scl[k].setCurrentIndex(0)
-                print 'Cannot find scale item for', scl[0]
+                print('Cannot find scale item for', scl[0])
 
     def buildUnits(self):
         for k in range(self.cfg.MAXCHANNELS):
@@ -115,7 +116,7 @@ class ESPChannels(QWidget):
                 self.h_uni[k].setCurrentIndex(items.index(scl[1]))
             else:
                 self.h_uni[k].setCurrentIndex(0)
-                print 'Cannot find units item for', scl[1]
+                print('Cannot find units item for', scl[1])
 
     def selectChannel(self, k, idx):
         was = self.cfg.conn.hw[k]

@@ -1,9 +1,9 @@
 # esdatasource.py - abstract data source
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
 import sys
-import esconfig
+from . import esconfig
 import numpy as np
 import ctypes
 
@@ -30,7 +30,7 @@ class ESDataSource(QObject):
         self.range=20*self.cfg.vert.unit_div[useme]
 
     def run(self):
-        print 'ESDS: running'
+        print('ESDS: running')
         self.running = True
         return True
 
@@ -60,12 +60,12 @@ class ESDS_Dummy(ESDataSource):
 
     def run(self):
         ESDataSource.run(self)
-        if self.timerid!=None:
+        if self.timerid is not None:
             self.killTimer(self.timerid)
-        self.timerid = self.startTimer(self.period_s*1000)
+        self.timerid = self.startTimer(int(self.period_s*1000))
         
     def stop(self):
-        if self.timerid!=None:
+        if self.timerid is not None:
             self.killTimer(self.timerid)
         ESDataSource.stop(self)
 
@@ -93,9 +93,9 @@ if __name__ == "__main__":
     def rcv():
         global dst
         n = ds.getData(dst)
-        print "Recv!", dst.ctypes.data
-        print np.mean(dst,0)
-        print np.std(dst,0)
+        print("Recv!", dst.ctypes.data)
+        print(np.mean(dst,0))
+        print(np.std(dst,0))
         
     ds.dataAvailable.connect(rcv)
 

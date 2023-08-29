@@ -1,9 +1,10 @@
 # esphardware.py
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 import sys
-import espconfig
+from . import espconfig
 import numpy as np
 
 class ESPHardware(QWidget):
@@ -57,7 +58,7 @@ class ESPHardware(QWidget):
         for ada in self.cfg.hw.adapters:
             name = ada[0]
             if len(ada)>1:
-                name = name + ": " + `ada[1]`
+                name = f"{name}: {ada[1]}"
             self.h_ada.addItem(name)
         self.findAdapter()
 
