@@ -37,7 +37,7 @@ class ESPDS_Nidaq(ESPDataSink):
         self.gentask.stop()
         self.gentask.unprep()
 
-    def genDone(self):
+    def genDone(self, *args):
         #print 'espds: genDone'
         self.markEnded()
         self.gentask.unprep()

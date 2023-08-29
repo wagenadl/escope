@@ -10,6 +10,7 @@ import numpy as np
 try:
     import nidaqmx
     import nidaqmx.stream_readers
+    import nidaqmx.stream_writers    
     nidaq = True
 except ImportError:
     nidaq = None
@@ -23,7 +24,7 @@ DAQmx_Rising = nidaqmx.constants.Edge.RISING
 
 DAQmx_FiniteSamps = nidaqmx.constants.AcquisitionType.FINITE
 DAQmx_ContSamps = nidaqmx.constants.AcquisitionType.CONTINUOUS
-DAQmx_HWTimedSinglePoint= nidaqmx.constants.AcquisitionType.HW_TIMED_SINGLE_POINT
+DAQmx_HWTimedSinglePoint = nidaqmx.constants.AcquisitionType.HW_TIMED_SINGLE_POINT
 
 
 def deviceList():
@@ -84,7 +85,8 @@ class ContAcqTask:
                 self.th.ai_channels.add_ai_voltage_chan(self.dev + "/" + ch,
                                                         ch,
                                                         terminal_config=DAQmx_RSE,
-                                                        min_val=-rng, max_val=rng)
+                                                        min_val=-rng, max_val=rng,
+                                                        units=DAQmx_Volts)
                 self.nchans += 1
             
             self.th.timing.cfg_samp_clk_timing(self.acqrate_hz,
@@ -140,13 +142,10 @@ class ContAcqTask:
 
 
 ######################################################################
-finiteprod_nextid = 1
-finiteprod_collection = {}
 
 class FiniteProdTask:
     def __init__(self, dev, chans, genrate_hz, data):
         self.dev = dev
-        self.collectionid = None
         self.chans = chans
         self.genrate_hz = genrate_hz
         self.th = None
@@ -168,36 +167,28 @@ class FiniteProdTask:
         self.foo = foo
 
     def prep(self):
-        global finiteprod_nextid
-        global finiteprod_collection
         if self.prepped:
             return
-        self.collectionid = finiteprod_nextid
-        finiteprod_nextid += 1
         if nidaq is None:
             raise AttributeError('No NIDAQ library found')
-        self.th = TaskHandle(0)
-        CHK(nidaq.DAQmxCreateTask("",ctypes.byref(self.th)))
+        self.th = nidaqmx.Task()
         self.nchans = 0
         for ch in self.chans:
-            CHK(nidaq.DAQmxCreateAOVoltageChan(self.th,
-                                               self.dev+"/"+ch, "",
-                                               float64(-10.0),float64(10.0),
-                                               DAQmx_Val_Volts, None))
+            self.th.ao_channels.add_ao_voltage_chan(self.dev + "/" + ch,
+                                                    ch,
+                                                    min_val=-10, max_val=10,
+                                                    units=DAQmx_Volts)
             self.nchans += 1
         print('genrate is ', self.genrate_hz)
         print('shape is ', self.data.shape[0])
-        CHK(nidaq.DAQmxCfgSampClkTiming(self.th,"",
-                                        float64(self.genrate_hz),
-                                        DAQmx_Val_Rising,
-                                        DAQmx_Val_FiniteSamps,
-                                        uInt64(self.data.shape[0])))
-        CHK(nidaq.DAQmxCfgOutputBuffer(self.th,uInt32(self.data.shape[0])))
+        self.th.timing.cfg_samp_clk_timing(self.genrate_hz,
+                                           active_edge=DAQmx_Rising,
+                                           sample_mode=DAQmx_FiniteSamps,
+                                           samps_per_chan=self.data.shape[0])
+        # CHK(nidaq.DAQmxCfgOutputBuffer(self.th,uInt32(self.data.shape[0])))
+        # ?-> th.out_stream.output_buf_size = self.data.shape[0]
         if self.foo is not None:
-            CHK(nidaq.DAQmxRegisterDoneEvent(self.th, 0,
-                                             DoneCallback_func,
-                                             self.collectionid))
-        finiteprod_collection[self.collectionid] = self
+            self.th.register_done_event(self.foo)
         self.prepped = True
 
     def run(self):
@@ -205,30 +196,23 @@ class FiniteProdTask:
             self.prep()
         if self.running:
             return
-        nwritten = int32()
-        offset = 0
-        while offset<self.data.shape[0]:
-            now = self.data.shape[0] - offset
-            CHK(nidaq.DAQmxWriteAnalogF64(self.th, int32(now),
-                                      int32(0), float64(0.0),
-                                      DAQmx_Val_GroupByScanNumber,
-                                      self.data[offset:,:].ctypes.data,
-                                      ctypes.byref(nwritten), None))
-            if nwritten<=0:
-                raise ValueError('Could not write all data')
-            offset += nwritten.value
-        CHK(nidaq.DAQmxStartTask(self.th))
+        #nwritten = int32()
+        #offset = 0
+        self.th.out_stream.auto_start = True
+        wrtr = nidaqmx.stream_writers.AnalogMultiChannelWriter(self.th.out_stream)
+        nwritten = writr.write_many_samples(self.data.T)
+        print(self.data.shape, nwritten)
         self.running = True
      
     def stop(self):
         if self.running:
-            CHK(nidaq.DAQmxTaskControl(self.th,DAQmx_Val_Task_Abort))
+            self.th.stop()
             self.running = False
 
     def isRunning(self):
         if not self.running:
             return False
-        if nidaq.DAQmxWaitUntilTaskDone(self.th, float64(0.0001)):
+        if th.wait_until_done(0.0001):
             # ^ The NIDAQ docs say that I can use float64(0.0) for immediate
             # answer, but that did not work for me. So I wait 0.1 ms instead.
             return True
@@ -237,16 +221,10 @@ class FiniteProdTask:
     
     def unprep(self):
         #print 'FiniteProdTask: unprep, nidaq=',nidaq, ' prepped=',self.prepped, ' th=',self.th
-        global finiteprod_collection
         if self.isRunning():
             raise AttributeError('Cannot unprepare while running')
         if self.prepped:
             self.prepped = False
-            if finiteprod_collection:
-                # ^ This checks that the collection hasn't been deleted yet
-                # if this unprep is due to program exit
-                del finiteprod_collection[self.collectionid]
-            self.collectionid = None
             if nidaq is not None and self.th is not None:
-                CHK(nidaq.DAQmxClearTask(self.th))
+                self.th.close()
             self.th = None
