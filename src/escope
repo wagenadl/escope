@@ -379,7 +379,7 @@ class MainWin(QWidget):
         if self.apane.dat is None:
             return # Nothing to save
         dat = self.apane.dat[:self.apane.write_idx,:]
-        name = f"{self.rundate}-{self.sweepno:03i}"
+        name = f"{self.rundate}-{self.sweepno:03d}"
         f = open(name + ".dat", "wb")
         f.write(dat)
         f.close()

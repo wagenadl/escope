@@ -9,7 +9,7 @@ from . import esconfig
 
 from numba import jit
 
-@jit
+@jit(nopython=True)
 def trueblue(xx, ichn, stride, yy):
     X = xx.shape[0]
     Y = len(yy)//2
@@ -40,7 +40,7 @@ def sample(xx, ichn, stride, yy):
     yy[:Y] = xx[xi[:-1],ichn]
 
 
-@jit    
+@jit(nopython=True)
 def limpoly1(yy, ymin, ymax):
     Y = len(yy)
     Y2 = len(yy)-1
@@ -51,7 +51,7 @@ def limpoly1(yy, ymin, ymax):
             yy[k] = ymax
 
 
-@jit
+@jit(nopython=True)
 def limpoly2(yy, ymin, ymax):
     Y = len(yy)/2
     Y2 = len(yy)-1
