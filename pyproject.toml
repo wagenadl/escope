@@ -19,6 +19,7 @@ dependencies = [
   "nidaqmx",
 ]
 
+
 requires-python = ">=3.7"
 classifiers = [ 
   "Programming Language :: Python :: 3",
@@ -29,3 +30,7 @@ classifiers = [
 [project.urls]
 "Homepage" = "https://github.com/wagenadl/escope"
 
+
+[project.scripts]
+escope = "escope_wagenadl.escope:main"
+espark = "escope_wagenadl.espark:main"

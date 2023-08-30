@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-# esscope.py
+# escope.py
 
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -10,15 +10,15 @@ import os
 import re
 import pickle
 import numpy as np
-import escopelib.esconfig as esconfig
-from escopelib.eshardware import ESHardware
-from escopelib.eschannels import ESChannels
-from escopelib.estrigger import ESTrigger
-from escopelib.esvzeromarks import ESVZeroMarks
-from escopelib.esvscalemarks import ESVScaleMarks
-from escopelib.estmarks import ESTMarks
-from escopelib.esscopewin import ESScopeWin
-from escopelib.estriggerbuffer import ESTriggerBuffer
+from .escopelib import esconfig
+from .escopelib.eshardware import ESHardware
+from .escopelib.eschannels import ESChannels
+from .escopelib.estrigger import ESTrigger
+from .escopelib.esvzeromarks import ESVZeroMarks
+from .escopelib.esvscalemarks import ESVScaleMarks
+from .escopelib.estmarks import ESTMarks
+from .escopelib.esscopewin import ESScopeWin
+from .escopelib.estriggerbuffer import ESTriggerBuffer
 
 #class FittingView(QGraphicsView):
 #    def __init__(self,scene=None,parent=None):
@@ -244,7 +244,7 @@ class MainWin(QWidget):
     def startRun(self):
         self.stopRequested = False
         self.inSweep = False
-        self.ds = ESTriggerBuffer(cfg)
+        self.ds = ESTriggerBuffer(self.cfg)
         self.ds.reconfig()
         self.sweepno = 0
         self.rundate = esconfig.datetimestr()
@@ -354,7 +354,7 @@ class MainWin(QWidget):
         f.write("channels = { ")
         for ch in self.cfg.conn.hw:
             if not np.isnan(ch):
-                f.write("'" + cfg.hw.channels[int(ch)] + "' ")
+                f.write("'" + self.cfg.hw.channels[int(ch)] + "' ")
                 nch += 1
         f.write("}\n")
         f.write(f"nchannels = {nch}\n")
@@ -463,8 +463,12 @@ class MainWin(QWidget):
     def closeEvent(self,evt):
         QApplication.quit()
 
-if __name__=='__main__':
+def main():
     print('This is EScope')
+    os.chdir(os.path.expanduser("~/Documents"))
+    if not os.path.exists("EScopeData"):
+        os.mkdir("EScopeData")
+    os.chdir("EScopeData")
     app = QApplication(sys.argv)
     cfg = esconfig.basicconfig()
     # cfg.trig.enable = True
@@ -474,3 +478,6 @@ if __name__=='__main__':
     mw.show()
     app.exec_()
     
+
+if __name__=='__main__':
+    main()

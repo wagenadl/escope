@@ -10,14 +10,14 @@ import os
 import re
 import pickle
 import numpy as np
-import escopelib.espconfig as espconfig
-from escopelib.esphardware import ESPHardware
-from escopelib.espchannels import ESPChannels
-from escopelib.esptraingraph import ESPTrainGraph
-from escopelib.esppulsegraph import ESPPulseGraph
-from escopelib.espvaredit import ESPVarEdit
-from escopelib.esptypebox import ESPTypeBox
-import escopelib.espsinks as espsinks
+from .escopelib import espconfig
+from .escopelib.esphardware import ESPHardware
+from .escopelib.espchannels import ESPChannels
+from .escopelib.esptraingraph import ESPTrainGraph
+from .escopelib.esppulsegraph import ESPPulseGraph
+from .escopelib.espvaredit import ESPVarEdit
+from .escopelib.esptypebox import ESPTypeBox
+from .escopelib import espsinks
 
 class MainWin(QWidget):
     def __init__(self, cfg):
@@ -377,7 +377,7 @@ class MainWin(QWidget):
 
     def startRun(self):
         #print 'startRun'
-        self.ds = espsinks.makeDataSink(cfg)
+        self.ds = espsinks.makeDataSink(self.cfg)
         self.ds.runComplete.connect(self.doneRun)
         self.ds.reconfig()
         self.ds.run()
@@ -457,10 +457,17 @@ class MainWin(QWidget):
             self.cfg.__dict__[k] = cfg.__dict__[k]
 
 ######################################################################
-if __name__=='__main__':
+def main():
+    print("This is ESpark")
+    os.chdir(os.path.expanduser("~/Documents"))
+    if not os.path.exists("EScopeData"):
+        os.mkdir("EScopeData")
+    os.chdir("EScopeData")
     app = QApplication(sys.argv)
     cfg = espconfig.basicconfig()
     mw = MainWin(cfg)
     mw.show()
     app.exec_()
     
+if __name__=='__main__':
+    main()

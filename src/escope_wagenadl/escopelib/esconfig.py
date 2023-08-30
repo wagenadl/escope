@@ -7,7 +7,7 @@ import numpy as np
 from . import esnidaq
 import time
 
-from Struct import Struct
+from .Struct import Struct
 
 def datetimestr():
     return time.strftime("%Y%m%d-%H%M%S",time.localtime())

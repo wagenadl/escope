@@ -1,10 +1,12 @@
 README.md
 pyproject.toml
-src/setup.py
-src/escope_wagenadl/Struct.py
+src/escope_wagenadl/__init__.py
+src/escope_wagenadl/escope.py
+src/escope_wagenadl/espark.py
 src/escope_wagenadl.egg-info/PKG-INFO
 src/escope_wagenadl.egg-info/SOURCES.txt
 src/escope_wagenadl.egg-info/dependency_links.txt
+src/escope_wagenadl.egg-info/entry_points.txt
 src/escope_wagenadl.egg-info/requires.txt
 src/escope_wagenadl.egg-info/top_level.txt
 src/escope_wagenadl/escopelib/Struct.py

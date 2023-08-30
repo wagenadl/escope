@@ -8,7 +8,7 @@ import numpy as np
 from . import esnidaq
 import time
 
-from Struct import Struct
+from .Struct import Struct
 
 class Monovalue:
     def __init__(self, base=0):
