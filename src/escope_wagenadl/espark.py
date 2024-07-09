@@ -17,6 +17,7 @@ from .escopelib.esptraingraph import ESPTrainGraph
 from .escopelib.esppulsegraph import ESPPulseGraph
 from .escopelib.espvaredit import ESPVarEdit
 from .escopelib.esptypebox import ESPTypeBox
+from .escopelib.ledlabel import LEDLabel
 from .escopelib import espsinks
 
 class MainWin(QWidget):
@@ -27,13 +28,25 @@ class MainWin(QWidget):
         self.h_hw = None
         self.h_chn = None
 
+        self.label = [None] * self.cfg.MAXCHANNELS
+        self.traingraph = [None] * self.cfg.MAXCHANNELS
+        self.pulsegraph = [None] * self.cfg.MAXCHANNELS
+        self.htr = [None] * self.cfg.MAXCHANNELS
+        self.hpu = [None] * self.cfg.MAXCHANNELS
+        self.frames = [None] * self.cfg.MAXCHANNELS
+        self.olay = None
+        self.scroll = None
+        self.canvas = None
+        self.tid = None
+        
         self.setWindowTitle('ESpark')
         self.place()
         self.makeContents()
         self.stylize()
+        self.olay.update()
 
     def stylize(self):
-        self.setFont(self.cfg.font)
+        self.setFont(QFont(*self.cfg.font))
         
     def place(self):
         scr = QApplication.desktop()
@@ -44,33 +57,44 @@ class MainWin(QWidget):
 
     def makeButtons(self):
         butlay = QHBoxLayout()
-        hw = QPushButton(self)
+        butlay.setContentsMargins(15, 9, 15, 0)
+        hw = QPushButton()
         hw.setText("Hardware...")
         hw.clicked.connect(self.click_hardware)
 
-        cn = QPushButton(self)
+        cn = QPushButton()
         cn.setText("Channels...")
         cn.clicked.connect(self.click_channels)
 
-        ld = QPushButton(self)
+        ld = QPushButton()
         ld.setText("Load...")
         ld.clicked.connect(self.click_load)
 
-        sv = QPushButton(self)
+        sv = QPushButton()
         sv.setText("Save...")
         sv.clicked.connect(self.click_save)
 
-        rn = QCheckBox(self)
+        ll = LEDLabel()
+        ll.setToolTip("Indicates whether stimuli are currently being sent out")
+        self.h_led = ll
+        
+        rn = QPushButton()
         rn.setText("Run")
-        rn.stateChanged.connect(self.click_run)
+        rn.clicked.connect(self.click_run)
         self.h_run = rn
 
-        rp = QCheckBox(self)
+        sp = QPushButton()
+        sp.setText("Stop")
+        sp.clicked.connect(self.click_stop)
+        self.h_stop = sp
+        sp.hide()
+
+        rp = QCheckBox()
         rp.setText("Repeat")
         rp.stateChanged.connect(self.click_rep)
         self.h_rep = rp
 
-        abt = QPushButton(self)
+        abt = QPushButton()
         abt.setText("About...")
         abt.clicked.connect(self.click_about) 
 
@@ -80,7 +104,9 @@ class MainWin(QWidget):
         butlay.addWidget(ld)
         butlay.addWidget(sv)
         butlay.addStretch(1)
+        butlay.addWidget(ll)
         butlay.addWidget(rn)
+        butlay.addWidget(sp)
         butlay.addWidget(rp)
         butlay.addStretch(1)
         butlay.addWidget(abt)
@@ -88,19 +114,23 @@ class MainWin(QWidget):
         hei = 22
         for h in [hw, cn, ld, sv, rn, rp, abt]:
             h.setFocusPolicy(Qt.NoFocus)
-            h.setFixedHeight(hei)
+            #h.setFixedHeight(hei)
         return butlay
 
     def makeGraphs(self, k):
         grlay = QHBoxLayout()
-        llay = QVBoxLayout()
+        grlay.setContentsMargins(0, 0, 0, 0)
+        #llay = QVBoxLayout()
+        #llay.setContentsMargins(0, 0, 0, 0)
         lbl = QLabel(chr(65+k))
+        self.label[k] = lbl
+        lbl.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         f=lbl.font()
         f.setWeight(QFont.Bold)
         lbl.setFont(f)
-        llay.addWidget(lbl)
-        llay.addStretch(1)
-        grlay.addLayout(llay)
+        grlay.addWidget(lbl)
+        #llay.addStretch(1)
+        #grlay.addLayout(llay)
         self.traingraph[k] = ESPTrainGraph(self.cfg, k)
         grlay.addWidget(self.traingraph[k])
         self.pulsegraph[k] = ESPPulseGraph(self.cfg, k)
@@ -138,8 +168,10 @@ class MainWin(QWidget):
         self.htr[k] = {}
         self.htr[k]['ntrains'] = addMonoTrain('ntrains','# trains',0)
         self.htr[k]['period_s'] = addBiTrain('period_s','Train period',1)
+        self.htr[k]['period_s']['label'].setToolTip("Period is measured start to start. This number is also used for the (end-to-start) interval between repeated runs.")
         self.htr[k]['npulses'] = addBiTrain('npulses','# pulses',2)
         self.htr[k]['ipi_s'] = addTriTrain('ipi_s','Pulse period',3)
+        self.htr[k]['ipi_s']['label'].setToolTip("Period is measured start to start.")
         self.htr[k]['delay_s'] = addMonoTrain('delay_s','Delay',4)
         if k==0 and False:
             self.htr[k]['delay_s']['base'].setVisible(False)
@@ -194,8 +226,8 @@ class MainWin(QWidget):
     def makeFrame(self, k):
         frame = QFrame()
         frame.setFrameShape(QFrame.StyledPanel)
-        frame.setMinimumHeight(300)
         vlay = QVBoxLayout(frame)
+        vlay.setContentsMargins(9, 6, 9, 9)
         grlay = self.makeGraphs(k)
         vlay.addLayout(grlay)
 
@@ -219,27 +251,26 @@ class MainWin(QWidget):
         
     def makeContents(self):
         olay = QVBoxLayout(self)
+        olay.setContentsMargins(0, 0, 0, 0)
         butlay = self.makeButtons()
         olay.addLayout(butlay)
-
+        self.olay = olay
         scroll = QScrollArea(self)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn) # for debug
-        scroll.setFrameShape(QFrame.NoFrame)
-        vp = QFrame()
-        slay = QVBoxLayout(vp)
-
-        self.traingraph = [None] * self.cfg.MAXCHANNELS
-        self.pulsegraph = [None] * self.cfg.MAXCHANNELS
-        self.htr = [None] * self.cfg.MAXCHANNELS
-        self.hpu = [None] * self.cfg.MAXCHANNELS
-        self.frames = [None] * self.cfg.MAXCHANNELS
+        #scroll.setFrameShape(QFrame.NoFrame)
+        self.scroll = scroll
+        self.canvas = QWidget()
+        slay = QVBoxLayout(self.canvas)
+        slay.setContentsMargins(9, 0, 9, 0)
+        
         for k in range(self.cfg.MAXCHANNELS):
             frame = self.makeFrame(k)
+            frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             self.frames[k] = frame
             slay.addWidget(frame)
             
-        scroll.setWidget(vp)
+        scroll.setWidget(self.canvas)
         olay.addWidget(scroll)
 
         for k in range(self.cfg.MAXCHANNELS):
@@ -323,8 +354,12 @@ class MainWin(QWidget):
         if varname=='type':
             self.trainButEnable(k)
             self.pulseButEnable(k)
-            if self.cfg.pulse[k].type.value != h.currentData():
-                self.cfg.pulse[k].type.value = h.currentData()
+            curdat = h.currentData()
+            if curdat is None:
+                h.setCurrentIndex(0)
+                curdat = h.currentData()
+            if not(self.cfg.pulse[k].type.value == curdat):
+                self.cfg.pulse[k].type.value = curdat
                 if maydraw:
                     self.rebuildGraphs(k)
                     drawn = True
@@ -376,33 +411,46 @@ class MainWin(QWidget):
     def chnChanged(self, k):
         x = self.cfg.conn.hw[k]
         got = False
-        if x is not None:
-            got = True
-            isana = self.cfg.hw.channels[x].lower().startswith("a")
-        if got:
-            self.hpu[k]['type']['base'].setEnabled(True)
+        if x is None:
+            self.frames[k].hide()
+        else:
+            self.frames[k].show()
+            name = self.cfg.hw.channels[x]
+            self.label[k].setText(name)
+            isana = name.lower().startswith("a")
             self.hpu[k]['type']['base'].rebuild(not isana)            
-        else:
-            self.hpu[k]['type']['base'].setEnabled(False)
-            self.hpu[k]['type']['base'].setCurrentIndex(0)
-        for a in ['amp1_u', 'amp2_u']:
-            for b in ['base', 'delta', 'delti']:
-                s = str(self.hpu[k][a][b].text())
-                if len(s):
-                    s = s[:-1] + self.cfg.conn.units[k][-1]
-                    self.hpu[k][a][b].setText(s)
-                    self.newPulse(a+'.'+b, k, maydraw=False)
-        self.newPulse('amp1_u.base', k, forcedraw=True)
-        self.trainButEnable(k)
-        self.pulseButEnable(k)
-        self.newPulse('type.base',k,forcedraw=True) # Force redraw
-        #self.rebuildGraphs(k)
+            for a in ['amp1_u', 'amp2_u']:
+                for b in ['base', 'delta', 'delti']:
+                    s = str(self.hpu[k][a][b].text())
+                    if len(s):
+                        s = s[:-1] + self.cfg.conn.units[k][-1]
+                        self.hpu[k][a][b].setText(s)
+                        self.newPulse(a+'.'+b, k, maydraw=False)
+            self.newPulse('amp1_u.base', k, forcedraw=True)
+            self.trainButEnable(k)
+            self.pulseButEnable(k)
+            self.newPulse('type.base',k,forcedraw=True) # Force redraw
+            #self.rebuildGraphs(k)
+        self.canvas.resize(QSize(self.canvas.width(), self.canvas.sizeHint().height()))
+        self.resizeEvent()
 
-    def click_run(self, on):
-        if on:
-            self.startRun()
-        else:
-            self.stopRun()
+    def resizeEvent(self, e=None):
+        w = self.scroll.viewport().width()
+        #x = self.scroll.x()
+        for f in self.frames:
+            x = f.x()
+            f.resize(w - 2*x, f.height())
+
+    def click_run(self):
+        self.startRun()
+        self.h_run.hide()
+        self.h_stop.show()
+
+    def click_stop(self):
+        self.tid = None
+        self.stopRun()
+        self.h_run.show()
+        self.h_stop.hide()
 
     def click_rep(self, on):
         for k in range(self.cfg.MAXCHANNELS):
@@ -410,6 +458,9 @@ class MainWin(QWidget):
 
     def startRun(self):
         #print 'startRun'
+        self.h_led.turnOn()
+        if self.ds:
+            return # already running
         self.ds = espsinks.makeDataSink(self.cfg)
         self.ds.runComplete.connect(self.doneRun)
         self.ds.reconfig()
@@ -418,30 +469,40 @@ class MainWin(QWidget):
 
     def stopRun(self):
         #print 'stopRun', self, self.ds
+        self.h_led.turnOff()
         if self.ds:
             self.ds.stop()
             self.ds = None
 
     def doneRun(self):
-        chk = self.h_run.isChecked()
+        self.h_led.turnOff()
         rep = self.h_rep.isChecked()
-        self.h_run.setChecked(False)
+        # self.h_run.setChecked(False)
         self.ds = None
-        if rep and chk:
-            self.startTimer(int(self.cfg.train[0].period_s.base*1000))
+        if rep:
+            self.tid = self.startTimer(int(self.cfg.train[0].period_s.base*1000))
+        else:
+            self.h_run.show()
+            self.h_stop.hide()
 
     def timerEvent(self, evt):
-        self.killTimer(evt.timerId())
-        if self.h_rep.isChecked() and not self.h_run.isChecked():
-            self.h_run.setChecked(True) # This calls startRun!
+        if evt.timerId() == self.tid:
+            self.killTimer(self.tid)
+            self.tid = None
+            if self.h_rep.isChecked():
+                self.click_run()
+            else:
+                self.h_run.show()
+                self.h_stop.hide()
 
     def click_about(self):
         abt = QMessageBox()
-        abt.setText("ESpark v. 2.0\n(C) Daniel Wagenaar 2010, 2023")
+        abt.setText("ESpark v. 2.1\n(C) Daniel Wagenaar 2010, 2023–24")
         abt.setWindowTitle("About ESpark")
         abt.exec_()
 
     def click_save(self):
+        print(self.cfg)
         name = QFileDialog.getSaveFileName(self,
                                            "Save Configuration",
                                            os.getcwd(),
@@ -451,9 +512,8 @@ class MainWin(QWidget):
             return
         if not name.endswith('.espark'):
             name += '.espark'
-        f = open(name,"wb")
-        pickle.dump(self.cfg, f)
-        f.close()
+        with open(name, "wt") as fd:
+            fd.write(repr(self.cfg))
 
     def click_load(self):
         name = QFileDialog.getOpenFileName(self,
@@ -464,9 +524,17 @@ class MainWin(QWidget):
         if not name:
             return
 
-        f = open(name,"rb")
-        cfg = pickle.load(f)
-        f.close()
+        with open(name, "rt") as fd:
+            txt = fd.read()
+        if txt.startswith("Struct("):
+            from .escopelib.Struct import Struct
+            from numpy import array
+            from .escopelib.espconfig import Trivalue, Bivalue, Monovalue
+            from .escopelib.espconfig import Pulsetype
+            cfg = eval(txt)
+        else:
+            return # Failure
+
         self.setConfig(cfg)
         for k in range(self.cfg.MAXCHANNELS):
             for a in self.htr[k]:
@@ -500,6 +568,10 @@ def main():
     cfg = espconfig.basicconfig()
     mw = MainWin(cfg)
     mw.show()
+    app.processEvents()#QEventLoop.AllEvents, maxtime=1)
+    mw.resize(1400, 900) 
+    app.processEvents()#QEventLoop.AllEvents, maxtime=1)
+    mw.resize(1402, 900)
     app.exec_()
     
 if __name__=='__main__':

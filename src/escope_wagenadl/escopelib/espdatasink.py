@@ -18,9 +18,9 @@ class ESPDataSink(QObject):
         self.t_end_s = None
 
     def reconfig(self):
-        self.idx = np.nonzero(~np.isnan(self.cfg.conn.hw))[0]
+        self.idx = [k for k, x in enumerate(self.cfg.conn.hw) if x is not None]
         self.nchans = len(self.idx)
-        self.chans = self.cfg.conn.hw[self.idx]
+        self.chans = [self.cfg.conn.hw[k] for k in self.idx]
         self.nscans = 0
         for k in range(self.nchans):
             timing = espconfig.mktiming(self.cfg,self.idx[k])

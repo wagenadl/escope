@@ -14,9 +14,10 @@ class ESPGraph(FigureCanvas):
         # self.axes.hold(True)
         FigureCanvas.__init__(self, fig)
         self.setParent(parent)
+        self.setMaximumSize(2000, 250)
         self.setSizePolicy(QSizePolicy.Expanding,
-                           QSizePolicy.Expanding)
-        self.setMinimumSize(100, 50)
+                           QSizePolicy.Fixed)
+        self.setMinimumSize(100, 100)
         fig.set_facecolor('#eeeeee') # The Qt palette doesn't affect the fig.
 
     def setXLabel(self, s):

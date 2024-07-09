@@ -10,20 +10,20 @@ import time
 
 from .Struct import Struct
 
-_MAXCHANNELS = 3
+_MAXCHANNELS = 4
 
 class Monovalue:
     def __init__(self, base=0):
         self.base = base+0.0
     def __repr__(self):
-        return '{base: %g}' % self.base
+        return f'Monovalue(base={self.base})'
 
 class Bivalue:
     def __init__(self, base=0, delta=0):
         self.base = base+0.0
         self.delta = delta+0.0
     def __repr__(self):
-        return '{base: %g, delta: %g}' % (self.base, self.delta)
+        return f'Bivalue(base={self.base}, delta={self.delta})'
 
 class Trivalue:
     def __init__(self, base=0, delta=0, delti=0):
@@ -31,8 +31,7 @@ class Trivalue:
         self.delta = delta+0.0
         self.delti = delti+0.0
     def __repr__(self):
-        return '{base: %g, delta: %g, delti: %g}' % \
-               (self.base, self.delta, self.delti)
+        return f'Trivalue(base={self.base}, delta={self.delta}, delti={self.delti})'
 
 class Pulsetype:
     OFF = 0
@@ -45,7 +44,7 @@ class Pulsetype:
     def __init__(self, val=OFF):
         self.value = val
         
-    def __repr__(self):
+    def __str__(self):
         if self.value==self.OFF:
             return 'Off'
         elif self.value==self.MONOPHASIC:
@@ -60,6 +59,8 @@ class Pulsetype:
             return 'TTL'
         else:
             return f"{self.value}"
+    def __repr__(self):
+        return f"Pulsetype(Pulsetype.{str(self).upper()})"
     def have1dur(self):
         return self.value != self.OFF
     def have1amp(self):
@@ -245,8 +246,8 @@ def basicconfig():
 
     cfg.MAXCHANNELS = _MAXCHANNELS
     cfg.FONTSIZE = 10
-    cfg.font = QFont()
-    cfg.font.setPointSize(cfg.FONTSIZE)
+    f = QFont()
+    cfg.font = [f.family(), cfg.FONTSIZE]
 
     cfg.hw = Struct()
     cfg.conn = Struct()
@@ -334,9 +335,10 @@ def filltrain(cfg, k, timing, vvv):
 
 def mktrain(cfg, k):
     timing = mktiming(cfg, k)
-    ttt = (np.arange(timing[0]+4)-1)/cfg.hw.genrate.value
-    vvv = np.zeros(timing[0]+4)
-    filltrain(cfg, k, timing, vvv[2:-1])
+    marg = max(timing[0]//20, 2)
+    ttt = (np.arange(-marg+1, timing[0]+marg+1))/cfg.hw.genrate.value
+    vvv = np.zeros(ttt.shape)
+    filltrain(cfg, k, timing, vvv[marg:])
     return (ttt, vvv)
     
 def fillpulse(cfg, k, itr, ipu, vv):
@@ -387,7 +389,10 @@ def mkpulse(cfg, k, itr, ipu):
                             ipu*cfg.pulse[k].dur2_s.delti))
     else:
         dur2 = 0
-    vv = np.zeros(dur1+dur2+4)
-    fillpulse(cfg, k, itr, ipu, vv[2:-1])
-    tt = (np.arange(dur1+dur2+4)-1)/fs_hz
+
+    marg = max((dur1+dur2)//20, 2)
+
+    tt = (np.arange(-marg+1, dur1+dur2+marg+1))/fs_hz
+    vv = np.zeros(tt.shape)
+    fillpulse(cfg, k, itr, ipu, vv[marg:])
     return (tt, vv)

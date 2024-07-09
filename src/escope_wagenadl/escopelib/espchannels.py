@@ -16,17 +16,24 @@ class ESPChannels(QWidget):
         self.setWindowTitle("ESpark: Channels")
         self.cfg = cfg
         lay = QGridLayout(self)
-        lbl = QLabel("Stim", self)
-        lbl.setAlignment(Qt.AlignCenter)
-        lay.addWidget(lbl,0,0)
+        #lbl = QLabel("Stim", self)
+        #lbl.setAlignment(Qt.AlignCenter)
+        #lay.addWidget(lbl,0,0)
         lbl = QLabel("Channel", self)
+        lbl.setToolTip('''Note that some channels are analog outputs, while others are digital.
+On digital channels, only TTL pulses can be generated and the scale is fixed.
+On analog channels, many different waveform shapes can be generated.''')        
         lbl.setAlignment(Qt.AlignCenter)
         lay.addWidget(lbl,0,1)
         lbl = QLabel("1 V makes", self)
+        lbl.setToolTip('''Here you explain to ESpark what happens in the real world when
+it instructs the DAC to output 1 V.
+This enables the use of correct units in the “Amplitude” boxes
+and graphs.''')
         lbl.setAlignment(Qt.AlignCenter)
         lay.addWidget(lbl,0,2,1,2)
 
-        self.setFont(self.cfg.font)
+        self.setFont(QFont(*self.cfg.font))
 
         self.h_chn = [None] * self.cfg.MAXCHANNELS
         self.h_scl = [None] * self.cfg.MAXCHANNELS
