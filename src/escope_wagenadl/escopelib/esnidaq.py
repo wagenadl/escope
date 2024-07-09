@@ -152,11 +152,10 @@ class ContAcqTask:
 class FiniteProdTask:
     def __init__(self, dev, chans, genrate_hz, data):
         self.dev = dev
-        self.chans = chans
+        self.chans = chans # i.e., names of the channels
         self.genrate_hz = genrate_hz
         self.th = None
-        self.nscans = 0
-        self.data = data
+        self.data = data # TxC
         self.prepped = False
         self.running = False
 
@@ -177,24 +176,44 @@ class FiniteProdTask:
             return
         if nidaq is None:
             raise AttributeError('No NIDAQ library found')
-        self.th = nidaqmx.Task()
-        self.nchans = 0
-        for ch in self.chans:
-            self.th.ao_channels.add_ao_voltage_chan(self.dev + "/" + ch,
-                                                    ch,
-                                                    min_val=-10, max_val=10,
-                                                    units=DAQmx_Volts)
-            self.nchans += 1
-        print('genrate is ', self.genrate_hz)
-        print('shape is ', self.data.shape[0])
-        self.th.timing.cfg_samp_clk_timing(self.genrate_hz,
-                                           active_edge=DAQmx_Rising,
-                                           sample_mode=DAQmx_FiniteSamps,
-                                           samps_per_chan=self.data.shape[0])
-        # CHK(nidaq.DAQmxCfgOutputBuffer(self.th,uInt32(self.data.shape[0])))
-        # ?-> th.out_stream.output_buf_size = self.data.shape[0]
+        self.ath = nidaqmx.Task()
+        self.adata = []
+        self.dth = nidaqmx.Task()
+        self.ddata = []
+        for k, ch in enumerate(self.chans):
+            if ch.lower().startswith("a"):
+                self.ath.ao_channels.add_ao_voltage_chan(self.dev + "/" + ch,
+                                                         ch,
+                                                         min_val=-10, max_val=10,
+                                                         units=DAQmx_Volts)
+                self.adata.append(self.data[:,k].copy())
+            else:
+                lines = self.dev + "/" + ch.replace("P", "port").replace(".", "/line"))
+                self.dth.do_channels.add_do_chan(lines)
+                self.ddata.append((self.data[:,k]>0).astype(np.uint8))
+        self.adata = np.array(adata)
+        self.ddata = np.array(ddata)
+        if len(self.adata):
+            self.ath.timing.cfg_samp_clk_timing(rate=self.genrate_hz,
+                                                active_edge=DAQmx_Rising,
+                                                sample_mode=DAQmx_FiniteSamps,
+                                                samps_per_chan=self.adata.shape[-1])
+        if len(self.ddata):
+            if len(self.adata):
+                src = f"{self.dev}/ao/SampleClock"
+            else:
+                src = ""
+            self.dth.timing.cfg_samp_clk_timing(rate=self.genrate_hz,
+                                                source=src,
+                                                active_edge=DAQmx_Rising,
+                                                sample_mode=DAQmx_FiniteSamps,
+                                                samps_per_chan=self.ddata.shape[-1])
+                    
         if self.foo is not None:
-            self.th.register_done_event(self.foo)
+            if len(self.adata):
+                self.ath.register_done_event(self.foo)
+            elif len(self.ddata):
+                self.dth.register_done_event(self.foo)
         self.prepped = True
 
     def run(self):
@@ -204,21 +223,33 @@ class FiniteProdTask:
             return
         #nwritten = int32()
         #offset = 0
-        wrtr = nidaqmx.stream_writers.AnalogMultiChannelWriter(self.th.out_stream)
-        nwritten = wrtr.write_many_sample(self.data.T.copy())
-        print(self.data.shape, nwritten)
-        self.th.start()
+        if len(self.adata):
+            awrtr = nidaqmx.stream_writers.AnalogMultiChannelWriter(self.ath.out_stream)
+            nawritten = awrtr.write_many_sample(self.adata)
+        if len(self.ddata):
+            dwrtr = nidaqmx.stream_writers.DigitalMultiChannelWriter(self.dth.out_stream)
+            ndwritten = dwrtr.write_many_sample_port_byte(self.ddata) # this may not be correct
+            self.dth.start() # this waits for the analog task if both exists
+        if len(self.adata):
+            self.ath.start()
         self.running = True
      
     def stop(self):
         if self.running:
-            self.th.stop()
+            if len(self.ddata):
+                self.dth.stop()
+            if len(self.adata):
+                self.ath.stop()
             self.running = False
 
     def isRunning(self):
         if not self.running:
             return False
-        if self.th.wait_until_done(0.0001):
+        if len(self.adata):
+            th = self.ath
+        else:
+            th = self.dth
+        if th.wait_until_done(0.0001):
             # ^ The NIDAQ docs say that I can use float64(0.0) for immediate
             # answer, but that did not work for me. So I wait 0.1 ms instead.
             return True
@@ -231,6 +262,10 @@ class FiniteProdTask:
             raise AttributeError('Cannot unprepare while running')
         if self.prepped:
             self.prepped = False
-            if nidaq is not None and self.th is not None:
-                self.th.close()
-            self.th = None
+            if nidaq is not None:
+                if self.ath is not None:
+                    self.ath.close()
+                    self.ath = None
+                if self.dth is not None:
+                    self.dth.close()
+                    self.dth = None
