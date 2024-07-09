@@ -53,9 +53,7 @@ class ESTrigger(QWidget):
                     self.cfgChanged.emit()
                 return rslot
             h.clicked.connect(mkSlot(ch))
-        f = self.font()
-        f.setPixelSize(self.cfg.FONTSIZE)
-        self.setFont(f)
+        self.setFont(self.cfg.font)
         lay.setSpacing(5)
         self.reconfig()
 

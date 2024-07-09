@@ -53,9 +53,7 @@ class MainWin(QWidget):
         self.stylize()
 
     def stylize(self):
-        f = self.font()
-        f.setPixelSize(12)
-        self.setFont(f)
+        self.setFont(self.cfg.font)
         p = self.palette()
         p.setColor(QPalette.Window,QColor("#000000"))
         self.setPalette(p)

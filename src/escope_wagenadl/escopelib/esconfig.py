@@ -31,6 +31,8 @@ def scale125(uold, du):
     unew = 10**unewdecade * unewminor
     return unew
 
+   
+
 def niceunit(num,uni):
     """Converts a number with a unit to nicer units
 
@@ -129,6 +131,9 @@ def basicconfig():
     cfg.COLORS = [ [1,1,0], [0,.8,1], [1,0,1], [.3,1,.3],
                    [1,0,0], [0,.6,0], [0,0,1], [.8,.5,0] ]
     cfg.FONTSIZE = 14
+    cfg.font = QFont()
+    cfg.font.setPointSize(cfg.FONTSIZE)
+    
     cfg.colors = []
     for k in range(len(cfg.COLORS)):
         cfg.colors.append(QColor(int(255*cfg.COLORS[k][0]),

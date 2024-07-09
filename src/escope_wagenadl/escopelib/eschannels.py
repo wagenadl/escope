@@ -26,9 +26,7 @@ class ESChannels(QWidget):
         lbl.setAlignment(Qt.AlignCenter)
         lay.addWidget(lbl,0,2,1,2)
 
-        f = self.font()
-        f.setPixelSize(self.cfg.FONTSIZE)
-        self.setFont(f)
+        self.setFont(self.cfg.font)
 
         self.h_chn = [None] * self.cfg.MAXCHANNELS
         self.h_scl = [None] * self.cfg.MAXCHANNELS

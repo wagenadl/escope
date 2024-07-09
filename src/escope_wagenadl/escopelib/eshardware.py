@@ -30,9 +30,7 @@ class ESHardware(QWidget):
         lay.addWidget(self.h_ada,0,1)
         lay.addWidget(self.h_rate,1,1)
         lay.setSpacing(10)
-        f = self.font()
-        f.setPixelSize(self.cfg.FONTSIZE)
-        self.setFont(f)
+        self.setFont(self.cfg.font)
 
         self.buildAdapters()
         self.reconfig()
