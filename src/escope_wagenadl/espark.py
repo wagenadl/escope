@@ -33,13 +33,8 @@ class MainWin(QWidget):
         self.stylize()
 
     def stylize(self):
-        f = self.font()
-        f.setPixelSize(12)
-        self.setFont(f)
-        #p = self.palette()
-        #p.setColor(QPalette.Window,QColor("#000000"))
-        #self.setPalette(p)
-
+        self.setFont(self.cfg.font)
+        
     def place(self):
         scr = QApplication.desktop()
         scrw = scr.screenGeometry().width()
@@ -76,12 +71,7 @@ class MainWin(QWidget):
 
         abt = QPushButton(self)
         abt.setText("About...")
-        abt.clicked.connect(self.click_about)
-
-        for h in [hw, cn, ld, sv, rn, rp, abt]:
-            h.setFocusPolicy(Qt.NoFocus)
-            h.setFixedHeight(20)
-           
+        abt.clicked.connect(self.click_about) 
 
         butlay = QHBoxLayout()
         butlay.addWidget(hw)
@@ -192,7 +182,9 @@ class MainWin(QWidget):
             self.hpu[k]['amp1_u'] = addTriPulse('amp1_u','Amplitude',1)
             self.hpu[k]['dur1_s'] = addTriPulse('dur1_s','Duration',2)
             self.hpu[k]['amp2_u'] = addTriPulse('amp2_u','2nd amp.',3)
+            self.hpu[k]['amp2_u']['label'].setToolTip("or vertical offset for sine")
             self.hpu[k]['dur2_s'] = addTriPulse('dur2_s','2nd dur.',4)
+            self.hpu[k]['dur2_s']['label'].setToolTip("or phase shift for sine")
 
             allbutlay = QHBoxLayout()
             allbutlay.addLayout(trbutlay)
@@ -217,10 +209,17 @@ class MainWin(QWidget):
                         self.hpu[k][ky][n].userChanged.connect(self.newPulse)
 
         for k in range(self.cfg.MAXCHANNELS):
-            self.trainButEnable(k)
-            self.pulseButEnable(k)
-            self.newPulse('type.base',k,forcedraw=True) # Force redraw
+            #self.trainButEnable(k)
+            #self.pulseButEnable(k)
+            self.chnChanged(k)
+            #self.newPulse('type.base',k,forcedraw=True) # Force redraw
 
+        hei = put.height()
+        for h in [hw, cn, ld, sv, rn, rp, abt]:
+            h.setFocusPolicy(Qt.NoFocus)
+            h.setFixedHeight(hei)
+
+            
     def trainButEnable(self, k):
         ntr = self.htr[k]['ntrains']['base'].value()
         npu = self.htr[k]['npulses']['base'].value()
@@ -232,8 +231,7 @@ class MainWin(QWidget):
         self.htr[k]['period_s']['delta'].setEnabled(ntr>2)
         self.htr[k]['npulses']['delta'].setEnabled(ntr>1)
         self.htr[k]['ipi_s']['base'].setEnabled(npu>1 and not typissine)
-        self.htr[k]['ipi_s']['delta'].setEnabled(ntr>1 and npu>1
-                                                 and not typissine)
+        self.htr[k]['ipi_s']['delta'].setEnabled(ntr>1 and npu>1 and not typissine)
         self.htr[k]['ipi_s']['delti'].setEnabled(npu>2 and not typissine)
 
     def pulseButEnable(self, k):
@@ -280,7 +278,7 @@ class MainWin(QWidget):
                         self.trainButEnable(k)                                
                         self.pulseButEnable(k)                                
         p = h.palette()
-        p.setColor(QPalette.Text,
+        p.setColor(QPalette.Normal, QPalette.Text,
                    QColor("black") if ok else QColor("red"))
         h.setPalette(p)
         if ok:
@@ -300,8 +298,8 @@ class MainWin(QWidget):
         if varname=='type':
             self.trainButEnable(k)
             self.pulseButEnable(k)
-            if self.cfg.pulse[k].type.value != h.currentIndex():
-                self.cfg.pulse[k].type.value = h.currentIndex()
+            if self.cfg.pulse[k].type.value != h.currentData():
+                self.cfg.pulse[k].type.value = h.currentData()
                 if maydraw:
                     self.rebuildGraphs(k)
                     drawn = True
@@ -314,7 +312,7 @@ class MainWin(QWidget):
                 elif varname=='dur2_s' and subname=='base':
                     ok = val>=0
             p = h.palette()
-            p.setColor(QPalette.Text,
+            p.setColor(QPalette.Normal, QPalette.Text,
                        QColor("black") if ok else QColor("red"))
             h.setPalette(p)
             if ok:
@@ -341,8 +339,8 @@ class MainWin(QWidget):
 
     def hwChanged(self):
         for k in range(self.cfg.MAXCHANNELS):
-            self.rebuildGraphs(k)
-            
+            self.chnChanged(k)
+                        
     def click_channels(self):
         if self.h_chn is None:
             self.h_chn = ESPChannels(self.cfg)
@@ -351,6 +349,17 @@ class MainWin(QWidget):
         self.h_chn.show()
 
     def chnChanged(self, k):
+        x = self.cfg.conn.hw[k]
+        got = False
+        if x is not None:
+            got = True
+            isana = self.cfg.hw.channels[x].lower().startswith("a")
+        if got:
+            self.hpu[k]['type']['base'].setEnabled(True)
+            self.hpu[k]['type']['base'].rebuild(not isana)            
+        else:
+            self.hpu[k]['type']['base'].setEnabled(False)
+            self.hpu[k]['type']['base'].setCurrentIndex(0)
         for a in ['amp1_u', 'amp2_u']:
             for b in ['base', 'delta', 'delti']:
                 s = str(self.hpu[k][a][b].text())
@@ -361,9 +370,8 @@ class MainWin(QWidget):
         self.newPulse('amp1_u.base', k, forcedraw=True)
         self.trainButEnable(k)
         self.pulseButEnable(k)
-
-        #print 'ESPARK: chnChanged', k
-        pass
+        self.newPulse('type.base',k,forcedraw=True) # Force redraw
+        #self.rebuildGraphs(k)
 
     def click_run(self, on):
         if on:

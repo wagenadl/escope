@@ -10,6 +10,8 @@ import time
 
 from .Struct import Struct
 
+_MAXCHANNELS = 3
+
 class Monovalue:
     def __init__(self, base=0):
         self.base = base+0.0
@@ -38,35 +40,36 @@ class Pulsetype:
     BIPHASIC = 2
     RAMP = 3
     SINE = 4
+    TTL = 5
+    
     def __init__(self, val=OFF):
         self.value = val
+        
     def __repr__(self):
         if self.value==self.OFF:
-            return 'OFF'
+            return 'Off'
         elif self.value==self.MONOPHASIC:
-            return 'MONOPHASIC'
+            return 'Monophasic'
         elif self.value==self.BIPHASIC:
-            return 'BIPHASIC'
+            return 'Biphasic'
         elif self.value==self.RAMP:
-            return 'RAMP'
+            return 'Ramp'
         elif self.value==self.SINE:
-            return 'SINE'
+            return 'Sine'
+        elif self.value==self.TTL:
+            return 'TTL'
         else:
             return f"{self.value}"
     def have1dur(self):
-        return self.value in [self.MONOPHASIC,
-                             self.BIPHASIC,
-                             self.RAMP,
-                             self.SINE]
-    def have1amp(self):
         return self.value != self.OFF
+    def have1amp(self):
+        return self.value in [ self.MONOPHASIC, self.BIPHASIC, self.RAMP, self.SINE]
     def have2dur(self):
         return self.value in [ self.BIPHASIC, self.SINE ]
     def have2durUSE(self):
         return self.value in [ self.BIPHASIC ]
     def have2amp(self):
-        return self.value in [self.BIPHASIC,
-                             self.RAMP, self.SINE ]
+        return self.value in [self.BIPHASIC, self.RAMP, self.SINE ]
         
 
 def datetimestr():
@@ -208,11 +211,16 @@ def outputchannels(ada):
     typ = ada[0]
     if typ=='dummy':
         chs = []
-        for k in range(4):
+        for k in range(2):
             chs.append(f'ao{k}')
+        for k in range(2):
+            chs.append(f'P1.{k}')
+            
     elif typ=='nidaq':
         dev = ada[1]
         chs = esnidaq.devAOChannels(dev)
+        chs = chs[:_MAXCHANNELS - 1]
+        chs += esnidaq.devDOChannels(dev)
     return chs
 
 def confighardware(cfg):
@@ -220,7 +228,7 @@ def confighardware(cfg):
     cfg.hw.channels = outputchannels(cfg.hw.adapter)
     N = min(2, len(cfg.hw.channels))
 
-    cfg.conn.hw = np.zeros(cfg.MAXCHANNELS) + np.nan
+    cfg.conn.hw = [None for k in range(cfg.MAXCHANNELS)]
     for n in range(N):
         cfg.conn.hw[n] = n
     cfg.conn.scale = np.ones(cfg.MAXCHANNELS)
@@ -235,8 +243,10 @@ def datetime():
 def basicconfig():
     cfg = Struct()
 
-    cfg.MAXCHANNELS = 2
-    cfg.FONTSIZE = 14
+    cfg.MAXCHANNELS = _MAXCHANNELS
+    cfg.FONTSIZE = 10
+    cfg.font = QFont()
+    cfg.font.setPointSize(cfg.FONTSIZE)
 
     cfg.hw = Struct()
     cfg.conn = Struct()
@@ -270,14 +280,6 @@ def basicconfig():
         cfg.pulse[k].dur2_s = Trivalue(0.010)
 
     return cfg
-
-#def mindelay(cfg):
-#    d=0
-#    for k in range(len(cfg.train)):
-#        d = min(d, cfg.train[k].delay_s.base)
-#    if d>=0:
-#        d = 0
-#    return d
 
 def mktiming(cfg, k):
     fs_hz = cfg.hw.genrate.value
@@ -366,6 +368,8 @@ def fillpulse(cfg, k, itr, ipu, vv):
     elif typ==Pulsetype.SINE:
         tt = np.arange(dur1)
         vv[:dur1] = amp1*np.sin(2*np.pi*(tt-dur2)/dur1)+amp2
+    elif typ==Pulsetype.TTL:
+        vv[:dur1] = 5.0
     else:
         raise ValueError(f'Unknown pulsetype: {typ}')
 

@@ -18,14 +18,15 @@ except ImportError:
     
 
 # Some constants
-DAQmx_RSE = nidaqmx.constants.TerminalConfiguration.RSE
-DAQmx_Volts = nidaqmx.constants.VoltageUnits.VOLTS
-DAQmx_Rising = nidaqmx.constants.Edge.RISING
-
-DAQmx_FiniteSamps = nidaqmx.constants.AcquisitionType.FINITE
-DAQmx_ContSamps = nidaqmx.constants.AcquisitionType.CONTINUOUS
-DAQmx_HWTimedSinglePoint = nidaqmx.constants.AcquisitionType.HW_TIMED_SINGLE_POINT
-
+if nidaq:
+    DAQmx_RSE = nidaqmx.constants.TerminalConfiguration.RSE
+    DAQmx_Volts = nidaqmx.constants.VoltageUnits.VOLTS
+    DAQmx_Rising = nidaqmx.constants.Edge.RISING
+    
+    DAQmx_FiniteSamps = nidaqmx.constants.AcquisitionType.FINITE
+    DAQmx_ContSamps = nidaqmx.constants.AcquisitionType.CONTINUOUS
+    DAQmx_HWTimedSinglePoint = nidaqmx.constants.AcquisitionType.HW_TIMED_SINGLE_POINT
+    
 
 def deviceList():
     if nidaq is None:
@@ -43,6 +44,11 @@ def devAOChannels(dev):
     system = nidaqmx.system.System.local()
     chs = [c.name for c in system.devices[dev].ao_physical_chans]
     return [c.replace(dev + '/', '') for c in chs]
+
+def devDOChannels(dev):
+    system = nidaqmx.system.System.local()
+    chs = [c.name for c in system.devices[dev].do_lines]
+    return [c.replace(dev + '/', '').replace("port", "P").replace("/line", ".") for c in chs]
 
 ######################################################################
 

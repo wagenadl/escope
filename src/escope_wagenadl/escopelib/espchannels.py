@@ -26,9 +26,7 @@ class ESPChannels(QWidget):
         lbl.setAlignment(Qt.AlignCenter)
         lay.addWidget(lbl,0,2,1,2)
 
-        f = self.font()
-        f.setPixelSize(self.cfg.FONTSIZE)
-        self.setFont(f)
+        self.setFont(self.cfg.font)
 
         self.h_chn = [None] * self.cfg.MAXCHANNELS
         self.h_scl = [None] * self.cfg.MAXCHANNELS
@@ -85,10 +83,10 @@ class ESPChannels(QWidget):
             for c in self.cfg.hw.channels:
                 self.h_chn[k].addItem(c)
             self.h_chn[k].addItem('--')
-            if np.isnan(self.cfg.conn.hw[k]):
+            if self.cfg.conn.hw[k] is None:
                 self.h_chn[k].setCurrentIndex(self.h_chn[k].count()-1)
             else:
-                self.h_chn[k].setCurrentIndex(int(self.cfg.conn.hw[k]))
+                self.h_chn[k].setCurrentIndex(self.cfg.conn.hw[k])
 
     def buildScales(self):
         for k in range(self.cfg.MAXCHANNELS):
@@ -103,6 +101,7 @@ class ESPChannels(QWidget):
             else:
                 self.h_scl[k].setCurrentIndex(0)
                 print('Cannot find scale item for', scl[0])
+            self.h_scl[k].setEnabled(self.h_chn[k].currentText().lower().startswith("a"))
 
     def buildUnits(self):
         for k in range(self.cfg.MAXCHANNELS):
@@ -117,19 +116,27 @@ class ESPChannels(QWidget):
             else:
                 self.h_uni[k].setCurrentIndex(0)
                 print('Cannot find units item for', scl[1])
+            self.h_uni[k].setEnabled(self.h_chn[k].currentText().lower().startswith("a"))
 
     def selectChannel(self, k, idx):
         was = self.cfg.conn.hw[k]
+        ena = False
         if idx==len(self.cfg.hw.channels):
-            self.cfg.conn.hw[k] = np.nan
+            self.cfg.conn.hw[k] = None
         else:
             if idx in self.cfg.conn.hw:
-                ak=np.nonzero(self.cfg.conn.hw==idx)[0][0]
+                ak = self.cfg.conn.hw.index(idx)
                 if ak!=k:
-                    self.cfg.conn.hw[ak] = np.nan
+                    self.cfg.conn.hw[ak] = None
                     self.h_chn[ak].setCurrentIndex(len(self.cfg.hw.channels))
+                    self.h_scl[ak].setEnabled(False)
+                    self.h_uni[ak].setEnabled(False)
                     self.cfgChanged.emit(ak)
             self.cfg.conn.hw[k] = idx
+            ena = self.h_chn[k].currentText().lower().startswith("a")
+        self.h_scl[k].setEnabled(ena)
+        self.h_uni[k].setEnabled(ena)
+            
         if self.cfg.conn.hw[k]!=was:
             self.cfgChanged.emit(k)
 

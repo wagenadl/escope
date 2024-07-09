@@ -12,19 +12,29 @@ class ESPTypeBox(QComboBox):
         QComboBox.__init__(self, parent)
         self.cfg = cfg
         self.k = k
-        self.addItem('Off')
-        self.addItem('Monophasic')
-        self.addItem('Biphasic')
-        self.addItem('Ramp')
-        self.addItem('Sine')
+        self.rebuild(False)
+
+    def rebuild(self, digital=False):
+        self.clear()
+        vals = [espconfig.Pulsetype.OFF]
+        if digital:
+            vals.append(espconfig.Pulsetype.TTL)
+        else:
+            vals.append(espconfig.Pulsetype.MONOPHASIC)
+            vals.append(espconfig.Pulsetype.BIPHASIC)
+            vals.append(espconfig.Pulsetype.RAMP)
+            vals.append(espconfig.Pulsetype.SINE)
+        for v in vals:
+            self.addItem(str(espconfig.Pulsetype(v)), v)
         self.reset()
         self.activated.connect(self.foo)
 
     def reset(self):
-        self.setCurrentIndex(self.cfg.pulse[self.k].type.value)
+        k = self.findData(self.cfg.pulse[self.k].type.value)
+        self.setCurrentIndex(k)
         
     def foo(self):
         self.userChanged.emit('type.base', int(self.k))
         
     def value(self):
-        return espconfig.Pulsetype(self.currentIndex())
+        return espconfig.Pulsetype(self.currentData())

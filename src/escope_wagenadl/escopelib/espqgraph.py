@@ -1,42 +1,37 @@
 import numpy as np
 import sys
-import scipy.weave as weave
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from numba import jit
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 
-
-def trueblue(xx, ymin):
+@jit
+def trueblue(xx, yy):
     '''Find min and max in bins
 
     ymin and ymax are output arrays; they must be the same size'''
     X = len(xx)
-    Y = len(ymin)/2
-
-    code = '''
-    int i, j;
-    double *dxx = xx;
-    double *ymn = ymin;
-    double *ymx = ymn + Y;
-    int ix0, ix1;
-    double mn, mx;
-    for (i=0; i<Y; i++) {
-      ix0 = i*X/Y;
-      ix1 = (i+1)*X/Y;
-      if (ix1==ix0)
-        ix1++;
-      mn = mx = dxx[ix0];
-      for (j=ix0; j<ix1; j++) {
-        if (dxx[j]>mx)
-          mx = dxx[j];
-        else if (dxx[j]<mn)
-          mn = dxx[j];
-      }
-      ymn[i] = mn;
-      ymx[Y-i-1] = mx;
-    }
-    '''
-    weave.inline(code,['X','Y','xx','ymin'])
-
+    Y = len(yy)//2
+    ix0 = 0
+    if X:
+        mn = mx = xx[0]
+    else:
+        mn = mx = 0
+    for i in range(Y):
+        ix1 = int((i+1)*X/Y)
+        if ix1 > ix0:
+            mn = mx = xx[ix0]
+        ix0 += 1
+        while ix0 < ix1:
+            x = xx[ix0]
+            if x<mn:
+                mn = x
+            elif x>mx:
+                mx = x
+            ix0 += 1
+        yy[i] = mn
+        yy[2*Y-1-i] = mx
+        
 def mkpoly(xx,yy,offset,scale):
     poly = QPolygon(len(xx))
     for k in range(len(xx)):
@@ -132,7 +127,7 @@ class ESPGraph(QWidget):
     def paintEvent(self, evt):
         p = QPainter(self)
         pn = p.pen()
-        pn.setWidth(0)
+        pn.setWidthF(1)
         #pn.setStyle(Qt.NoPen)
         N = len(self.tdat)
         t0 = self.tlim[0]
@@ -152,7 +147,7 @@ class ESPGraph(QWidget):
             if self.xx[k] is None:
                 self.xx[k] = np.hstack((np.arange(x0k,x1k),
                                         np.arange(x1k-1,x0k-1,-1)))
-            L = len(self.xx[k])/2
+            L = len(self.xx[k])//2
             if self.yy[k] is None:
                 self.yy[k] = np.zeros(self.xx[k].shape)
                 trueblue(self.vdat[k], self.yy[k])
@@ -168,11 +163,11 @@ class ESPGraph(QWidget):
             yl = self.v2y(self.yy[k])
             yh = self.v2y(self.yy[k][len(xx):])
             for i in range(len(xx)):
-                p.drawLine(xx[i],yl[i],xx[i],yh[L-1-i])
+                p.drawLine(QLineF(xx[i],yl[i],xx[i],yh[L-1-i]))
             for cc in self.partcol[k]:
                 x0c = int(self.t2x(cc[0]))
                 x1c = int(self.t2x(cc[1]))
-                print 'colorify', cc[0], cc[1], t0, t1, x0c,x1c
+                print('colorify', cc[0], cc[1], t0, t1, x0c,x1c)
                 if x0c<x0k:
                     x0c=x0k
                 elif x0c>x1k:
@@ -184,18 +179,14 @@ class ESPGraph(QWidget):
                 pn.setColor(cc[2])
                 p.setPen(pn)
                 p.setBrush(cc[2])
-                print 'colorify ->', x0k, x1k, x0c, x1c
+                print('colorify ->', x0k, x1k, x0c, x1c)
                 x0c -= x0k
                 x1c -= x0k
                 xx = self.xx[k][x0c:x1c]
                 L = len(xx)
                 yl = self.v2y(self.yy[k][x0c:x1c])
                 yh = self.v2y(self.yy[k][2*L-x1c:2*L-x0c])
-                print L, len(yl), len(yh), len(self.xx[k]), len(self.yy[k])
+                print(L, len(yl), len(yh), len(self.xx[k]), len(self.yy[k]))
                 for i in range(L):
-                    p.drawLine(xx[i],yl[i], xx[i],yh[L-1-i])
-                # p.drawPolygon(mkpoly(np.hstack((self.xx[k][x0c:x1c],
-                #                                 self.xx[k][-1-x1c:-1-x0c])),
-                #                      np.hstack((self.yy[k][x0c:x1c],
-                #                                 self.yy[k][-1-x1c:-1-x0c])),
-                #                      off, scl))
+                    p.drawLine(QLineF(xx[i],yl[i], xx[i],yh[L-1-i]))
+               
