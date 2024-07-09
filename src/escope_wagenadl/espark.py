@@ -42,7 +42,8 @@ class MainWin(QWidget):
         self.resize(700,700)
         self.move(scrw//2-self.width()//2,scrh//2-self.width()//2)
 
-    def makeContents(self):
+    def makeButtons(self):
+        butlay = QHBoxLayout()
         hw = QPushButton(self)
         hw.setText("Hardware...")
         hw.clicked.connect(self.click_hardware)
@@ -73,7 +74,6 @@ class MainWin(QWidget):
         abt.setText("About...")
         abt.clicked.connect(self.click_about) 
 
-        butlay = QHBoxLayout()
         butlay.addWidget(hw)
         butlay.addWidget(cn)
         butlay.addStretch(1)
@@ -85,140 +85,165 @@ class MainWin(QWidget):
         butlay.addStretch(1)
         butlay.addWidget(abt)
 
-        vlay = QVBoxLayout(self)
-        vlay.addLayout(butlay)
+        hei = 22
+        for h in [hw, cn, ld, sv, rn, rp, abt]:
+            h.setFocusPolicy(Qt.NoFocus)
+            h.setFixedHeight(hei)
+        return butlay
+
+    def makeGraphs(self, k):
+        grlay = QHBoxLayout()
+        llay = QVBoxLayout()
+        lbl = QLabel(chr(65+k))
+        f=lbl.font()
+        f.setWeight(QFont.Bold)
+        lbl.setFont(f)
+        llay.addWidget(lbl)
+        llay.addStretch(1)
+        grlay.addLayout(llay)
+        self.traingraph[k] = ESPTrainGraph(self.cfg, k)
+        grlay.addWidget(self.traingraph[k])
+        self.pulsegraph[k] = ESPPulseGraph(self.cfg, k)
+        grlay.addWidget(self.pulsegraph[k])
+        return grlay
+
+    def stylizeLabels(self, hh):
+        for h in hh:
+            f = h.font()
+            f.setStyle(QFont.StyleItalic)
+            h.setFont(f)
+            h.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
+
+    def makeTrainLayout(self, k):
+        trbutlay = QGridLayout()
+        def addMonoTrain(varname, lbl, y):
+            hl = QLabel(lbl+':')
+            trbutlay.addWidget(hl, y, 0)
+            h = ESPVarEdit(self.cfg, 'train', k, varname, 'base')
+            trbutlay.addWidget(h, y, 1)
+            return {'label':hl, 'base':h}
+        def addBiTrain(varname, lbl, y):
+            hh = addMonoTrain(varname, lbl, y)
+            h = ESPVarEdit(self.cfg, 'train', k, varname, 'delta')
+            trbutlay.addWidget(h, y, 2)
+            hh['delta'] = h
+            return hh
+        def addTriTrain(varname, lbl, y):
+            hh = addBiTrain(varname, lbl, y)
+            h = ESPVarEdit(self.cfg, 'train', k, varname, 'delti')
+            trbutlay.addWidget(h, y ,3)
+            hh['delti']=h
+            return hh
+
+        self.htr[k] = {}
+        self.htr[k]['ntrains'] = addMonoTrain('ntrains','# trains',0)
+        self.htr[k]['period_s'] = addBiTrain('period_s','Train period',1)
+        self.htr[k]['npulses'] = addBiTrain('npulses','# pulses',2)
+        self.htr[k]['ipi_s'] = addTriTrain('ipi_s','Pulse period',3)
+        self.htr[k]['delay_s'] = addMonoTrain('delay_s','Delay',4)
+        if k==0 and False:
+            self.htr[k]['delay_s']['base'].setVisible(False)
+            self.htr[k]['delay_s']['label'].setText(' ')
+        trnal = QLabel('Chg./train:')
+        trbutlay.addWidget(trnal,0,2)
+        trnil = QLabel('Chg./pulse:')
+        trbutlay.addWidget(trnil,2,3)
+        self.stylizeLabels([trnal, trnil])
+        return trbutlay
+
+    def makePulseLayout(self, k):
+        pubutlay = QGridLayout()
+        def addMonoPulse(varname, lbl, y):
+            hl = QLabel(lbl+':',self)
+            pubutlay.addWidget(hl,y,0)
+            h = ESPVarEdit(self.cfg, 'pulse', k, varname, 'base')
+            pubutlay.addWidget(h, y, 1)
+            return {'label': hl, 'base': h}
+        def addBiPulse(varname, lbl, y):
+            hh=addMonoPulse(varname, lbl, y)
+            h = ESPVarEdit(self.cfg, 'pulse', k, varname, 'delta')
+            pubutlay.addWidget(h, y, 2)
+            hh['delta'] = h
+            return hh
+        def addTriPulse(varname, lbl, y):
+            hh = addBiPulse(varname, lbl, y)
+            h = ESPVarEdit(self.cfg, 'pulse', k, varname, 'delti')
+            pubutlay.addWidget(h, y ,3)
+            hh['delti'] = h
+            return hh
+
+        self.hpu[k] = {}
+        putl = QLabel('Pulse type:')
+        pubutlay.addWidget(putl,0,0)
+        put = ESPTypeBox(self.cfg, k)
+        pubutlay.addWidget(put,0,1)
+        self.hpu[k]['type'] = {'label': putl, 'base': put}
+        punal = QLabel('Chg./train:')
+        pubutlay.addWidget(punal,0,2)
+        punil = QLabel('Chg./pulse:')
+        pubutlay.addWidget(punil,0,3)
+        self.hpu[k]['amp1_u'] = addTriPulse('amp1_u','Amplitude',1)
+        self.hpu[k]['dur1_s'] = addTriPulse('dur1_s','Duration',2)
+        self.hpu[k]['amp2_u'] = addTriPulse('amp2_u','2nd amp.',3)
+        self.hpu[k]['amp2_u']['label'].setToolTip("or vertical offset for sine")
+        self.hpu[k]['dur2_s'] = addTriPulse('dur2_s','2nd dur.',4)
+        self.hpu[k]['dur2_s']['label'].setToolTip("or phase shift for sine")
+        self.stylizeLabels([punal, punil])
+        return pubutlay
+    
+    def makeFrame(self, k):
+        frame = QFrame()
+        frame.setFrameShape(QFrame.StyledPanel)
+        frame.setMinimumHeight(300)
+        vlay = QVBoxLayout(frame)
+        grlay = self.makeGraphs(k)
+        vlay.addLayout(grlay)
+
+        allbutlay = QHBoxLayout()
+        trbutlay = self.makeTrainLayout(k)
+        allbutlay.addLayout(trbutlay)
+        allbutlay.addSpacing(10)
+        pubutlay = self.makePulseLayout(k)
+        allbutlay.addLayout(pubutlay)
+        vlay.addLayout(allbutlay)
+
+        for ky in self.htr[k]:
+            for n in ['base','delta','delti']:
+                if n in self.htr[k][ky]:
+                    self.htr[k][ky][n].userChanged.connect(self.newTrain)
+        for ky in self.hpu[k]:
+            for n in ['base','delta','delti']:
+                if n in self.hpu[k][ky]:
+                    self.hpu[k][ky][n].userChanged.connect(self.newPulse)
+        return frame
+        
+    def makeContents(self):
+        olay = QVBoxLayout(self)
+        butlay = self.makeButtons()
+        olay.addLayout(butlay)
+
+        scroll = QScrollArea(self)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn) # for debug
+        scroll.setFrameShape(QFrame.NoFrame)
+        vp = QFrame()
+        slay = QVBoxLayout(vp)
 
         self.traingraph = [None] * self.cfg.MAXCHANNELS
         self.pulsegraph = [None] * self.cfg.MAXCHANNELS
         self.htr = [None] * self.cfg.MAXCHANNELS
         self.hpu = [None] * self.cfg.MAXCHANNELS
+        self.frames = [None] * self.cfg.MAXCHANNELS
         for k in range(self.cfg.MAXCHANNELS):
-            vlay.addSpacing(10)
-            grlay = QHBoxLayout()
-            llay = QVBoxLayout()
-            lbl = QLabel(chr(65+k),self)
-            f=lbl.font()
-            f.setWeight(QFont.Bold)
-            lbl.setFont(f)
-            llay.addWidget(lbl)
-            llay.addStretch(1)
-            grlay.addLayout(llay)
-            self.traingraph[k] = ESPTrainGraph(self.cfg, k, self)
-            grlay.addWidget(self.traingraph[k])
-            self.pulsegraph[k] = ESPPulseGraph(self.cfg, k, self)
-            grlay.addWidget(self.pulsegraph[k])
-            vlay.addLayout(grlay)
-
-            trbutlay = QGridLayout()
-            def addMonoTrain(varname, lbl, y):
-                hl = QLabel(lbl+':',self)
-                trbutlay.addWidget(hl, y, 0)
-                h = ESPVarEdit(self.cfg, 'train', k,
-                               varname, 'base', self)
-                trbutlay.addWidget(h, y, 1)
-                return {'label':hl, 'base':h}
-            def addBiTrain(varname, lbl, y):
-                hh = addMonoTrain(varname, lbl, y)
-                h = ESPVarEdit(self.cfg, 'train', k,
-                                   varname, 'delta', self)
-                trbutlay.addWidget(h, y, 2)
-                hh['delta'] = h
-                return hh
-            def addTriTrain(varname, lbl, y):
-                hh = addBiTrain(varname, lbl, y)
-                h = ESPVarEdit(self.cfg, 'train', k,
-                               varname, 'delti', self)
-                trbutlay.addWidget(h, y ,3)
-                hh['delti']=h
-                return hh
-
-            self.htr[k] = {}
-            self.htr[k]['ntrains'] = addMonoTrain('ntrains','# trains',0)
-            self.htr[k]['period_s'] = addBiTrain('period_s','Train period',1)
-            self.htr[k]['npulses'] = addBiTrain('npulses','# pulses',2)
-            self.htr[k]['ipi_s'] = addTriTrain('ipi_s','Pulse period',3)
-            self.htr[k]['delay_s'] = addMonoTrain('delay_s','Delay',4)
-            if k==0 and False:
-                self.htr[k]['delay_s']['base'].setVisible(False)
-                self.htr[k]['delay_s']['label'].setText(' ')
-            trnal = QLabel('Chg./train:', self)
-            trbutlay.addWidget(trnal,0,2)
-            trnil = QLabel('Chg./pulse:', self)
-            trbutlay.addWidget(trnil,2,3)
-
-            pubutlay = QGridLayout()
-            def addMonoPulse(varname, lbl, y):
-                hl = QLabel(lbl+':',self)
-                pubutlay.addWidget(hl,y,0)
-                h = ESPVarEdit(self.cfg, 'pulse', k,
-                               varname, 'base', self)
-                pubutlay.addWidget(h, y, 1)
-                return {'label': hl, 'base': h}
-            def addBiPulse(varname, lbl, y):
-                hh=addMonoPulse(varname, lbl, y)
-                h = ESPVarEdit(self.cfg, 'pulse', k,
-                                   varname, 'delta', self)
-                pubutlay.addWidget(h, y, 2)
-                hh['delta'] = h
-                return hh
-            def addTriPulse(varname, lbl, y):
-                hh = addBiPulse(varname, lbl, y)
-                h = ESPVarEdit(self.cfg, 'pulse', k,
-                               varname, 'delti', self)
-                pubutlay.addWidget(h, y ,3)
-                hh['delti'] = h
-                return hh
-
-            self.hpu[k] = {}
-            putl = QLabel('Pulse type:', self)
-            pubutlay.addWidget(putl,0,0)
-            put = ESPTypeBox(self.cfg, k, self)
-            pubutlay.addWidget(put,0,1)
-            self.hpu[k]['type'] = {'label': putl, 'base': put}
-            punal = QLabel('Chg./train:', self)
-            pubutlay.addWidget(punal,0,2)
-            punil = QLabel('Chg./pulse:', self)
-            pubutlay.addWidget(punil,0,3)
-            self.hpu[k]['amp1_u'] = addTriPulse('amp1_u','Amplitude',1)
-            self.hpu[k]['dur1_s'] = addTriPulse('dur1_s','Duration',2)
-            self.hpu[k]['amp2_u'] = addTriPulse('amp2_u','2nd amp.',3)
-            self.hpu[k]['amp2_u']['label'].setToolTip("or vertical offset for sine")
-            self.hpu[k]['dur2_s'] = addTriPulse('dur2_s','2nd dur.',4)
-            self.hpu[k]['dur2_s']['label'].setToolTip("or phase shift for sine")
-
-            allbutlay = QHBoxLayout()
-            allbutlay.addLayout(trbutlay)
-            allbutlay.addStretch(1)
-            allbutlay.addSpacing(10)
-            allbutlay.addLayout(pubutlay)
-            vlay.addLayout(allbutlay)
-
-            for h in [trnal, trnil, punal, punil]:
-                f=h.font()
-                f.setStyle(QFont.StyleItalic)
-                h.setFont(f)
-                h.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
-
-            for ky in self.htr[k]:
-                for n in ['base','delta','delti']:
-                    if n in self.htr[k][ky]:
-                        self.htr[k][ky][n].userChanged.connect(self.newTrain)
-            for ky in self.hpu[k]:
-                for n in ['base','delta','delti']:
-                    if n in self.hpu[k][ky]:
-                        self.hpu[k][ky][n].userChanged.connect(self.newPulse)
+            frame = self.makeFrame(k)
+            self.frames[k] = frame
+            slay.addWidget(frame)
+            
+        scroll.setWidget(vp)
+        olay.addWidget(scroll)
 
         for k in range(self.cfg.MAXCHANNELS):
-            #self.trainButEnable(k)
-            #self.pulseButEnable(k)
             self.chnChanged(k)
-            #self.newPulse('type.base',k,forcedraw=True) # Force redraw
-
-        hei = put.height()
-        for h in [hw, cn, ld, sv, rn, rp, abt]:
-            h.setFocusPolicy(Qt.NoFocus)
-            h.setFixedHeight(hei)
-
             
     def trainButEnable(self, k):
         ntr = self.htr[k]['ntrains']['base'].value()
