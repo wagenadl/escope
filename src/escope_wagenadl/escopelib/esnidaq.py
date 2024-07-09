@@ -188,7 +188,7 @@ class FiniteProdTask:
                                                          units=DAQmx_Volts)
                 self.adata.append(self.data[:,k].copy())
             else:
-                lines = self.dev + "/" + ch.replace("P", "port").replace(".", "/line"))
+                lines = self.dev + "/" + ch.replace("P", "port").replace(".", "/line")
                 self.dth.do_channels.add_do_chan(lines)
                 self.ddata.append((self.data[:,k]>0).astype(np.uint8))
         self.adata = np.array(adata)
