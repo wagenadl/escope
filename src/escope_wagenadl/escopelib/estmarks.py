@@ -41,8 +41,8 @@ class ESTMarks(QWidget):
     def paintEvent(self, evt):
         p = QPainter(self)
         pn = p.pen()
-        f=p.font()
-        f.setPixelSize(10)
+        f = QFont(*self.cfg.font)
+        #f.setPointSize(7)
         p.setFont(f)
         
         hp = self.height()
@@ -56,7 +56,7 @@ class ESTMarks(QWidget):
         else:
             xp = wp * (self.cfg.trig.delay_div-x0)/(x1-x0)
         sclh = hp/4
-        pn.setWidth(0)
+        pn.setWidth(2)
         pn.setColor(QColor("#dddddd"))
         p.setPen(pn)
         if self.cfg.trig.enable:
@@ -70,7 +70,8 @@ class ESTMarks(QWidget):
         self.dxp_trig = sclh
             
         pn.setColor(QColor("white"))
-        pn.setWidth(2)
+        pn.setWidth(4)
+        pn.setCapStyle(Qt.FlatCap)
         p.setPen(pn)
         xp = wp * (x1-.5-x0)/(x1-x0)
         p.drawLine(int(xp+self.divp/2.), 5, int(xp-self.divp/2.), 5)
@@ -79,8 +80,8 @@ class ESTMarks(QWidget):
             scl = self.scl
         else:
             scl = self.cfg.hori.s_div
-        p.drawText(int(xp)-50, 10, 100, 20,
-                   Qt.AlignHCenter | Qt.AlignTop,
+        p.drawText(int(xp)-50, 0, 100, self.height(),
+                   Qt.AlignHCenter | Qt.AlignBottom,
                    esconfig.niceunit(scl,'s'))
 
     def wheelEvent(self,evt):

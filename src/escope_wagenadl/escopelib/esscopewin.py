@@ -226,7 +226,7 @@ class ESScopeWin(QWidget):
         for trc in range(len(self.cfg.conn.hw)):
             hw = self.cfg.conn.hw[trc]
             if ~np.isnan(hw):
-                self.cc.append(self.cfg.colors[trc])
+                self.cc.append(esconfig.color(self.cfg, trc))
                 self.traces.append(trc)
 
     def forceFeed(self, dat):

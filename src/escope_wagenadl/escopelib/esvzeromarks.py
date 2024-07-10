@@ -34,14 +34,14 @@ class ESVZeroMarks(QWidget):
         self.rp = rsclp
         for k in range(self.cfg.MAXCHANNELS):
             if np.isnan(self.cfg.conn.hw[k]):
-                self.xp[k] = np.nan;
-                self.yp[k] = np.nan;
+                self.xp[k] = np.nan
+                self.yp[k] = np.nan
             else:
-                p.setPen(self.cfg.colors[k])
+                p.setPen(esconfig.color(self.cfg, k))
                 if self.cfg.vert.coupling[k]==2:
                     p.setBrush(QColor("black"))
                 else:
-                    p.setBrush(self.cfg.colors[k])
+                    p.setBrush(esconfig.color(self.cfg, k))
 
                 xrp = hsclp*(.5+self.cfg.MAXCHANNELS-k)
                 xlp = xrp - 2*rsclp
@@ -57,18 +57,18 @@ class ESVZeroMarks(QWidget):
 
                 if yp < 0:
                     # Up arrow
-                    p.drawPolygon(mkpoly([xlp,xrp,(xlp+xrp)/2],
-                                         [1.5*rsclp,1.5*rsclp,0]))
+                    p.drawPolygon(mkpoly([xlp, xrp, (xlp+xrp)/2],
+                                         [2.5*rsclp, 2.5*rsclp, 0]))
                     self.yp[k] = .75*rsclp
                 elif yp >= hp:
                     # Down arrow
-                    p.drawPolygon(mkpoly([xlp,xrp,(xlp+xrp)/2],
-                                         [hp-1.5*rsclp-1,hp-1.5*rsclp-1,hp-1]))
+                    p.drawPolygon(mkpoly([xlp, xrp, (xlp+xrp)/2],
+                                         [hp-2.5*rsclp-1, hp-2.5*rsclp-1, hp-1]))
                     self.yp[k] = hp-.75*rsclp
                 else:
                     # Regular marker
                     p.drawEllipse(QPoint(int(xlp+xrp)//2, int(yp)),
-                                  int(rsclp), int(rsclp))
+                                  int(1.5*rsclp), int(1.5*rsclp))
                     p.drawLine(int(xrp), int(yp), int(wp), int(yp))
                     self.yp[k] = yp
 

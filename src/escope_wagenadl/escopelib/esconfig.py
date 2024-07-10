@@ -123,23 +123,24 @@ def datetime():
     dat = time.strftime('%Y%m%d',t0)
     tim = time.strftime('%H%M%S',t0)
     return (dat,tim)
-    
+
+_colors = {}
+def color(cfg, k):
+    cc = cfg.COLORS[k]
+    if cc not in _colors:
+        _colors[cc] = QColor(int(255*cc[0]), int(255*cc[1]), int(255*cc[2]))
+    return _colors[cc]
+
 def basicconfig():
     cfg = Struct()
+    cfg.VERSION = "escope-3.0"
 
     cfg.MAXCHANNELS = 8
-    cfg.COLORS = [ [1,1,0], [0,.8,1], [1,0,1], [.3,1,.3],
-                   [1,0,0], [0,.6,0], [0,0,1], [.8,.5,0] ]
-    cfg.FONTSIZE = 14
-    cfg.font = QFont()
-    cfg.font.setPointSize(cfg.FONTSIZE)
-    
-    cfg.colors = []
-    for k in range(len(cfg.COLORS)):
-        cfg.colors.append(QColor(int(255*cfg.COLORS[k][0]),
-                                 int(255*cfg.COLORS[k][1]),
-                                 int(255*cfg.COLORS[k][2])))
-                                 
+    cfg.COLORS = [ (1,1,0), (0,.8,1), (1,0,1), (.3,1,.3),
+                   (1,0,0), (0,.6,0), (0,0,1), (.8,.5,0) ]
+    cfg.FONTSIZE = 10
+    f = QFont()
+    cfg.font = [f.family(), cfg.FONTSIZE]
 
     cfg.hw = Struct()
     cfg.conn = Struct()

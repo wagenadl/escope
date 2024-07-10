@@ -19,6 +19,7 @@ from .escopelib.esvscalemarks import ESVScaleMarks
 from .escopelib.estmarks import ESTMarks
 from .escopelib.esscopewin import ESScopeWin
 from .escopelib.estriggerbuffer import ESTriggerBuffer
+from .escopelib import serializer
 
 #class FittingView(QGraphicsView):
 #    def __init__(self,scene=None,parent=None):
@@ -53,7 +54,7 @@ class MainWin(QWidget):
         self.stylize()
 
     def stylize(self):
-        self.setFont(self.cfg.font)
+        self.setFont(QFont(*self.cfg.font))
         p = self.palette()
         p.setColor(QPalette.Window,QColor("#000000"))
         self.setPalette(p)
@@ -67,50 +68,57 @@ class MainWin(QWidget):
 
     def makeContents(self):
         LSIZE = 40
-        RSIZE = 50
-        BSIZE = 25
+        RSIZE = 110
+        BSIZE = 35
 
-        hw = QPushButton(self)
+        hw = QPushButton()
         hw.setText("Hardware...")
         hw.clicked.connect(self.click_hardware)
 
-        cn = QPushButton(self)
+        cn = QPushButton()
         cn.setText("Channels...")
         cn.clicked.connect(self.click_channels)
 
-        tr = QPushButton(self)
+        tr = QPushButton()
         tr.setText("Trigger...")
         tr.clicked.connect(self.click_trigger)
 
-        rn = QCheckBox(self)
+        rn = QPushButton()
         rn.setText("Run")
-        rn.stateChanged.connect(self.click_run)
+        self.h_run = rn
+        rn.clicked.connect(self.click_run)
 
-        ca = QCheckBox(self)
+        sp = QPushButton()
+        sp.setText("Stop")
+        self.h_stop = sp
+        sp.clicked.connect(self.click_stop)
+        sp.hide()
+
+        ca = QCheckBox()
         ca.setText("Capture")
         ca.stateChanged.connect(self.click_capture)
 
-        dsp = QComboBox(self)
+        dsp = QComboBox()
         dsp.addItem('Dots')
         dsp.addItem('Lines')
         dsp.addItem('True')
-        dsp.setFixedHeight(20)
+        #dsp.setFixedHeight(20)
         dsp.currentIndexChanged.connect(self.click_display)
 
-        self.hdate = QLabel(self)
+        self.hdate = QLabel()
         self.hdate.setText(esconfig.datetimestr())
         self.hsweepno = QLabel(self)
         self.hsweepno.setText("#000")
         self.sweepno = 0
 
-        lds = QPushButton(self)
+        lds = QPushButton()
         lds.setText("Load Sweep...")
         lds.clicked.connect(self.click_loadsweep)
 
-        sas = QPushButton(self)
+        sas = QPushButton()
         sas.setText("Save Sweep")
         sas.clicked.connect(self.click_savesweep)
-        abt = QPushButton(self)
+        abt = QPushButton()
         abt.setText("About...")
         abt.clicked.connect(self.click_about)
 
@@ -119,13 +127,13 @@ class MainWin(QWidget):
         butlay.addWidget(cn)
         butlay.addWidget(tr)
         butlay.addStretch(1)
-        butlay.addSpacing(20)
         butlay.addWidget(lds)
         butlay.addWidget(sas)
         butlay.addWidget(abt)
         
         but2lay = QHBoxLayout()
         but2lay.addWidget(rn)
+        but2lay.addWidget(sp)
         but2lay.addWidget(ca)
         but2lay.addWidget(dsp)
         but2lay.addStretch(1)
@@ -134,7 +142,6 @@ class MainWin(QWidget):
         
         vlay = QVBoxLayout(self)
         vlay.addLayout(butlay)
-        vlay.addSpacing(2)
         vlay.addLayout(but2lay)
         
         for h in [rn, ca]:
@@ -146,14 +153,7 @@ class MainWin(QWidget):
             p.setColor(QPalette.WindowText,QColor("gray"))
             h.setPalette(p)
         for h in [hw, cn, tr, lds, sas, abt]:
-            #p = h.palette() # QPalette(Qt.darkBlue)
-            #p.setColor(QPalette.ButtonText,QColor("green"))
-            #p.setColor(QPalette.Button,QColor("black"))
-            #p.setColor(QPalette.Base,QColor("yellow"))
-            #p.setColor(QPalette.Window,QColor("blue"))
-            #h.setPalette(p)
             h.setFocusPolicy(Qt.NoFocus)
-            h.setFixedHeight(22)
 
         axlay = QHBoxLayout()
         
@@ -179,9 +179,8 @@ class MainWin(QWidget):
         dummy.setFixedSize(LSIZE,BSIZE)
         botlay.addWidget(dummy)
         self.bpane = ESTMarks(self.cfg, self)
-        self.bpane.setMinimumSize(50,BSIZE)
-        self.bpane.setSizePolicy(QSizePolicy.MinimumExpanding,
-                                 QSizePolicy.Fixed)
+        self.bpane.setMinimumSize(50, BSIZE)
+        self.bpane.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
         botlay.addWidget(self.bpane)
         dummy = QWidget(self)
         dummy.setFixedSize(RSIZE,BSIZE)
@@ -197,10 +196,10 @@ class MainWin(QWidget):
         vlay.setContentsMargins(0,0,0,2)
         axlay.setContentsMargins(0,0,0,0)
         botlay.setContentsMargins(0,0,0,0)
-        butlay.setContentsMargins(5,5,5,0)
-        butlay.setSpacing(5)
-        but2lay.setContentsMargins(15,0,15,10)
-        but2lay.setSpacing(5)
+        butlay.setContentsMargins(10,10,10,10)
+        butlay.setSpacing(10)
+        but2lay.setContentsMargins(10,0,10,10)
+        but2lay.setSpacing(10)
         self.apane.sweepStarted.connect(self.sweepStarted)
         self.apane.sweepComplete.connect(self.sweepComplete)
         
@@ -229,17 +228,19 @@ class MainWin(QWidget):
         self.h_trig.show()
         self.h_trig.raise_()
 
-    def click_run(self, on):
-        if on:
-            self.startRun()
-        else:
-            self.stopRunSoon()
+    def click_run(self):
+        self.startRun()
+
+    def click_stop(self):
+        self.stopRunSoon()
 
     def click_capture(self, on):
         self.cfg.capt_enable = not not on
         self.restart()
 
     def startRun(self):
+        self.h_run.hide()
+        self.h_stop.show()
         self.stopRequested = False
         self.inSweep = False
         self.ds = ESTriggerBuffer(self.cfg)
@@ -284,6 +285,8 @@ class MainWin(QWidget):
         p.setColor(QPalette.WindowText,QColor("gray"))
         self.hdate.setPalette(p)
         print('Stopped')
+        self.h_run.show()
+        self.h_stop.hide()
 
     def sweepComplete(self):
         self.inSweep = False
@@ -345,33 +348,26 @@ class MainWin(QWidget):
     def writeInfoFile(self, name=None):
         if name is None:
             name = self.rundate
-        f = open(name + ".txt","w")
-        f.write("rundate = '" + self.rundate + "'\n");
-        f.write("rate_hz = %g\n" % self.cfg.hw.acqrate.value);
-        nch = 0
-        f.write("channels = { ")
-        for ch in self.cfg.conn.hw:
-            if not np.isnan(ch):
-                f.write("'" + self.cfg.hw.channels[int(ch)] + "' ")
-                nch += 1
-        f.write("}\n")
-        f.write(f"nchannels = {nch}\n")
-        f.write("scale = { ")
-        for ch in range(len(self.cfg.conn.hw)):
-            if not np.isnan(self.cfg.conn.hw[ch]):
-                f.write(f"'{self.cfg.conn.scale[ch]:.5g} {self.cfg.conn.units[ch]}'\n")
-        f.write("}\n")
-        sweep_s = self.cfg.hori.s_div*(self.cfg.hori.xlim[1]-
-                                       self.cfg.hori.xlim[0])
-        sweep_scans = int(sweep_s * self.cfg.hw.acqrate.value)
-        f.write(f"scans_per_sweep = {sweep_scans}\n");
-        f.write(f"sweepperiod_s = {sweep_s:.6g}\n");
+        with open(name + ".escope", "w") as fd:
+            js = { "version": self.cfg.VERSION,
+                   "rundate": self.rundate,
+                   "rate_Hz": self.cfg.hw.acqrate.value}
+            chs = []
+            for ch in self.cfg.conn.hw:
+                if not np.isnan(ch):
+                    chs.append(self.cfg.hw.channels[int(ch)])
+            js["channels"] = chs
+            scl = []
+            for ch in range(len(self.cfg.conn.hw)):
+                if not np.isnan(self.cfg.conn.hw[ch]):
+                    scl.append(f"{self.cfg.conn.scale[ch]:.5g} {self.cfg.conn.units[ch]}")
+            js["scale"] = scl
+            js["sweep_s"] = self.cfg.hori.s_div*(self.cfg.hori.xlim[1] - self.cfg.hori.xlim[0])
+            js["sweep_scans"] = int(js["sweep_s"] * self.cfg.hw.acqrate.value)
+            serializer.dump(js, fd)
                                            
-        f.close()
-
-        f = open(name + ".escope", "wb")
-        pickle.dump(self.cfg, f)
-        f.close()
+        with open(name + ".config", "w") as fd:
+            serializer.dump(self.cfg, fd)
 
     def saveSweep(self):
         if self.apane.dat is None:
@@ -451,7 +447,7 @@ class MainWin(QWidget):
 
     def click_about(self):
         abt = QMessageBox()
-        abt.setText("EScope v. 2.0\n(C) Daniel Wagenaar 2010, 2023")
+        abt.setText("EScope v. 3.0\n(C) Daniel Wagenaar 2010, 2023, 2024")
         abt.setWindowTitle("About EScope")
         abt.exec_()
 

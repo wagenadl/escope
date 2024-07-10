@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "escope_wagenadl"
-version = "2.0.0"
+version = "3.0.0"
 authors = [
   { name="Daniel A. Wagenaar", email="daw@caltech.edu" }
 ]

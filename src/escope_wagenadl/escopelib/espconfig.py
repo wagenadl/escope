@@ -220,7 +220,6 @@ def outputchannels(ada):
     elif typ=='nidaq':
         dev = ada[1]
         chs = esnidaq.devAOChannels(dev)
-        chs = chs[:_MAXCHANNELS - 1]
         chs += esnidaq.devDOChannels(dev)
     return chs
 
@@ -243,7 +242,7 @@ def datetime():
     
 def basicconfig():
     cfg = Struct()
-
+    cfg.VERSION = "espark-3.0"
     cfg.MAXCHANNELS = _MAXCHANNELS
     cfg.FONTSIZE = 10
     f = QFont()

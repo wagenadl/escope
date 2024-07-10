@@ -40,8 +40,8 @@ class ESVScaleMarks(QWidget):
     def paintEvent(self, evt):
         p = QPainter(self)
         pn = p.pen()
-        f=p.font()
-        f.setPixelSize(10)
+        f = QFont(*self.cfg.font)
+        #f.setPointSize(7)
         p.setFont(f)
         
         hp = self.height()
@@ -51,9 +51,9 @@ class ESVScaleMarks(QWidget):
         self.divp = hp/(y1-y0)
 
         if self.cfg.trig.enable:
-            cc = self.cfg.colors[self.cfg.trig.source]
+            cc = esconfig.color(self.cfg, self.cfg.trig.source)
             pn.setColor(cc)
-            pn.setWidth(0)
+            pn.setWidth(2)
             p.setPen(pn)
             if self.cfg.trig.auto:
                 p.setBrush(QColor("black"))
@@ -69,13 +69,14 @@ class ESVScaleMarks(QWidget):
             p.drawPolygon(mkpoly([0.,wp/8.,wp/4.],
                                  [yp,yp-self.cfg.trig.direction*wp/6.,yp]))
 
-        pn.setWidth(2)
+        pn.setWidth(4)
+        pn.setCapStyle(Qt.FlatCap)
         p.setPen(pn)
         for k in range(self.cfg.MAXCHANNELS):
             if np.isnan(self.cfg.conn.hw[k]):
                 self.yp[k] = np.nan
             else:
-                pn.setColor(self.cfg.colors[k])
+                pn.setColor(esconfig.color(self.cfg, k))
                 p.setPen(pn)
                 yp = hp * (1 - (self.yy[k]-y0)/(y1-y0))
                 p.drawLine(5, int(yp+self.divp/2.), 5, int(yp-self.divp/2.))
@@ -84,8 +85,8 @@ class ESVScaleMarks(QWidget):
                     scl = self.scl
                 else:
                     scl = self.cfg.vert.unit_div[k]
-                p.drawText(10, int(yp-10), 100, 20,
-                           Qt.AlignVCenter,
+                p.drawText(0, int(yp-20), self.width() - 4, 40,
+                           Qt.AlignVCenter | Qt.AlignRight,
                            esconfig.niceunit(scl * self.cfg.conn.scale[k],
                                              self.cfg.conn.units[k]))
 

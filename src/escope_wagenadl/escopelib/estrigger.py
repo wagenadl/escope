@@ -39,10 +39,10 @@ class ESTrigger(QWidget):
         for ch in range(self.cfg.MAXCHANNELS):
             h = MyRadio(self)
             h.setText('')
-            h.setFixedHeight(20)
+            #h.setFixedHeight(20)
             h.setAutoFillBackground(True)
             p = h.palette()
-            p.setColor(QPalette.Button, self.cfg.colors[ch])
+            p.setColor(QPalette.Button, esconfig.color(self.cfg, ch))
             h.setPalette(p)
             self.hh.append(h)
             lay.addWidget(h)
@@ -53,7 +53,7 @@ class ESTrigger(QWidget):
                     self.cfgChanged.emit()
                 return rslot
             h.clicked.connect(mkSlot(ch))
-        self.setFont(self.cfg.font)
+        self.setFont(QFont(*self.cfg.font))
         lay.setSpacing(5)
         self.reconfig()
 

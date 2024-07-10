@@ -19,6 +19,7 @@ from .escopelib.espvaredit import ESPVarEdit
 from .escopelib.esptypebox import ESPTypeBox
 from .escopelib.ledlabel import LEDLabel
 from .escopelib import espsinks
+from .escopelib import serializer
 
 class MainWin(QWidget):
     def __init__(self, cfg):
@@ -396,6 +397,7 @@ class MainWin(QWidget):
             self.h_hw.cfgChanged.connect(self.hwChanged)
         self.h_hw.reconfig()
         self.h_hw.show()
+        self.h_hw.raise_()
 
     def hwChanged(self):
         for k in range(self.cfg.MAXCHANNELS):
@@ -407,6 +409,7 @@ class MainWin(QWidget):
             self.h_chn.cfgChanged.connect(self.chnChanged)
         self.h_chn.reconfig()
         self.h_chn.show()
+        self.h_chn.raise_()
 
     def chnChanged(self, k):
         x = self.cfg.conn.hw[k]
@@ -497,12 +500,11 @@ class MainWin(QWidget):
 
     def click_about(self):
         abt = QMessageBox()
-        abt.setText("ESpark v. 2.1\n(C) Daniel Wagenaar 2010, 2023–24")
+        abt.setText("ESpark v. 3.0\n(C) Daniel Wagenaar 2010, 2023–24")
         abt.setWindowTitle("About ESpark")
         abt.exec_()
 
     def click_save(self):
-        print(self.cfg)
         name = QFileDialog.getSaveFileName(self,
                                            "Save Configuration",
                                            os.getcwd(),
@@ -513,7 +515,7 @@ class MainWin(QWidget):
         if not name.endswith('.espark'):
             name += '.espark'
         with open(name, "wt") as fd:
-            fd.write(repr(self.cfg))
+            serializer.dump(self.cfg, fd) # fd.write(repr(self.cfg))
 
     def click_load(self):
         name = QFileDialog.getOpenFileName(self,
@@ -525,16 +527,7 @@ class MainWin(QWidget):
             return
 
         with open(name, "rt") as fd:
-            txt = fd.read()
-        if txt.startswith("Struct("):
-            from .escopelib.Struct import Struct
-            from numpy import array
-            from .escopelib.espconfig import Trivalue, Bivalue, Monovalue
-            from .escopelib.espconfig import Pulsetype
-            cfg = eval(txt)
-        else:
-            return # Failure
-
+            cfg = serializer.load(fd)
         self.setConfig(cfg)
         for k in range(self.cfg.MAXCHANNELS):
             for a in self.htr[k]:

@@ -10,13 +10,14 @@ import numpy as np
 try:
     import nidaqmx
     import nidaqmx.stream_readers
-    import nidaqmx.stream_writers    
+    import nidaqmx.stream_writers
+    import nidaqmx.constants
     nidaq = True
 except ImportError:
     nidaq = None
     print("no nidaqmx")
-    
 
+#%%
 # Some constants
 if nidaq:
     DAQmx_RSE = nidaqmx.constants.TerminalConfiguration.RSE
@@ -26,6 +27,7 @@ if nidaq:
     DAQmx_FiniteSamps = nidaqmx.constants.AcquisitionType.FINITE
     DAQmx_ContSamps = nidaqmx.constants.AcquisitionType.CONTINUOUS
     DAQmx_HWTimedSinglePoint = nidaqmx.constants.AcquisitionType.HW_TIMED_SINGLE_POINT
+    DAQmx_ChanPerLine = nidaqmx.constants.LineGrouping.CHAN_PER_LINE
     
 
 def deviceList():
@@ -142,6 +144,7 @@ class ContAcqTask:
         T, C = dst.shape
         nscans = min(T, self.nscans)
         dat = np.empty((C, nscans))
+        print(C, nscans)
         n = self.rdr.read_many_sample(dat, nscans)
         dst[:n,:] = dat.T
         return n
@@ -189,20 +192,16 @@ class FiniteProdTask:
                 self.adata.append(self.data[:,k].copy())
             else:
                 lines = self.dev + "/" + ch.replace("P", "port").replace(".", "/line")
-                self.dth.do_channels.add_do_chan(lines)
-                self.ddata.append((self.data[:,k]>0).astype(np.uint8))
-        self.adata = np.array(adata)
-        self.ddata = np.array(ddata)
-        if len(self.adata):
-            self.ath.timing.cfg_samp_clk_timing(rate=self.genrate_hz,
+                self.dth.do_channels.add_do_chan(lines, line_grouping=DAQmx_ChanPerLine)
+                self.ddata.append((self.data[:,k]>0).astype(np.uint32)*0xffffffff)
+        self.adata = np.array(self.adata)
+        self.ddata = np.array(self.ddata)
+        self.ath.timing.cfg_samp_clk_timing(rate=self.genrate_hz,
                                                 active_edge=DAQmx_Rising,
                                                 sample_mode=DAQmx_FiniteSamps,
                                                 samps_per_chan=self.adata.shape[-1])
         if len(self.ddata):
-            if len(self.adata):
-                src = f"{self.dev}/ao/SampleClock"
-            else:
-                src = ""
+            src = f"/{self.dev}/ao/SampleClock"
             self.dth.timing.cfg_samp_clk_timing(rate=self.genrate_hz,
                                                 source=src,
                                                 active_edge=DAQmx_Rising,
@@ -228,7 +227,7 @@ class FiniteProdTask:
             nawritten = awrtr.write_many_sample(self.adata)
         if len(self.ddata):
             dwrtr = nidaqmx.stream_writers.DigitalMultiChannelWriter(self.dth.out_stream)
-            ndwritten = dwrtr.write_many_sample_port_byte(self.ddata) # this may not be correct
+            ndwritten = dwrtr.write_many_sample_port_uint32(self.ddata) # this may not be correct
             self.dth.start() # this waits for the analog task if both exists
         if len(self.adata):
             self.ath.start()

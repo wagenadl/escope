@@ -16,7 +16,7 @@ class ESChannels(QWidget):
         self.setWindowTitle("EScope: Channels")
         self.cfg = cfg
         lay = QGridLayout(self)
-        lbl = QLabel("Trace", self)
+        lbl = QLabel("     ", self)
         lbl.setAlignment(Qt.AlignCenter)
         lay.addWidget(lbl,0,0)
         lbl = QLabel("Channel", self)
@@ -26,7 +26,7 @@ class ESChannels(QWidget):
         lbl.setAlignment(Qt.AlignCenter)
         lay.addWidget(lbl,0,2,1,2)
 
-        self.setFont(self.cfg.font)
+        self.setFont(QFont(*self.cfg.font))
 
         self.h_chn = [None] * self.cfg.MAXCHANNELS
         self.h_scl = [None] * self.cfg.MAXCHANNELS
@@ -49,7 +49,7 @@ class ESChannels(QWidget):
             lbl = QFrame(self)
             lbl.setAutoFillBackground(True)
             p = lbl.palette()
-            p.setColor(QPalette.Window, self.cfg.colors[k])
+            p.setColor(QPalette.Window, esconfig.color(self.cfg, k))
             lbl.setPalette(p)
             lay.addWidget(lbl,1+k,0)
 
