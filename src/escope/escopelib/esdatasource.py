@@ -42,11 +42,9 @@ class ESDataSource(QObject):
 
         An array must be passed in, so no memory allocation is performed.
         The array may not be filled to capacity.
-        getData returns the number of rows filled.
-
-        Note to implementers: Unlike all other ESDataSource methods,
-        you do not have to call this one from a descendent."""
+        getData returns the number of rows filled."""
         return 0
+    
 
 class ESDS_Dummy(ESDataSource):
     def __init__(self, cfg):

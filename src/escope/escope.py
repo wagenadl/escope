@@ -441,13 +441,14 @@ class MainWin(QWidget):
             self.hsweepno.setText('#%03i' % self.sweepno)
 
     def click_savesweep(self):
+        print("clicksave", self.ds)
         self.saveSweep()
         if not self.apane.sweepIsComplete() and self.ds is not None:
             self.saveSweepRequested = True
 
     def click_about(self):
         abt = QMessageBox()
-        abt.setText("EScope v. 3.0\n(C) Daniel Wagenaar 2010, 2023, 2024")
+        abt.setText("EScope v. 3.1.0\n(C) Daniel Wagenaar 2010, 2023, 2024")
         abt.setWindowTitle("About EScope")
         abt.exec_()
 

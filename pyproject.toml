@@ -3,13 +3,12 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "escope_wagenadl"
-version = "3.0.0"
+name = "escope"
+version = "3.0.1"
 authors = [
   { name="Daniel A. Wagenaar", email="daw@caltech.edu" }
 ]
 description = "A software oscilloscope for electrophysiology"
-
 readme = "README.md"
 
 dependencies = [
@@ -23,7 +22,7 @@ dependencies = [
 requires-python = ">=3.7"
 classifiers = [ 
   "Programming Language :: Python :: 3",
-  "License :: OSI Approved :: GPL License",
+  "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
   "Operating System :: OS Independent"
 ]
 
@@ -32,5 +31,5 @@ classifiers = [
 
 
 [project.scripts]
-escope = "escope_wagenadl.escope:main"
-espark = "escope_wagenadl.espark:main"
+escope = "escope.escope:main"
+espark = "escope.espark:main"

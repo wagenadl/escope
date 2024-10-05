@@ -500,7 +500,7 @@ class MainWin(QWidget):
 
     def click_about(self):
         abt = QMessageBox()
-        abt.setText("ESpark v. 3.0\n(C) Daniel Wagenaar 2010, 2023–24")
+        abt.setText("ESpark v. 3.1.0\n(C) Daniel Wagenaar 2010, 2023–24")
         abt.setWindowTitle("About ESpark")
         abt.exec_()
 

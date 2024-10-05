@@ -91,79 +91,97 @@ class ESTriggerBuffer(ESDataSource):
         self.source.stop()
         ESDataSource.stop(self)
 
+
+    def _import_hunttrig_up(self, src, origidx):
+        k = 0
+        if self.trig_primed < PRIMELIM:
+            while k < src.size:
+                if src[k] < self.trig_revert:
+                    self.trig_primed += 1
+                    if self.trig_primed >= PRIMELIM:
+                        break
+                else:
+                    self.trig_primed = 0
+                k += 1
+        if self.trig_primed >= PRIMELIM:
+            while k < src.size:
+                if src[k] > self.trig_volt and origidx + k >= self.pretrig_scans:
+                    self.trig_idx = origidx + k
+                    self.nexttrigok_idx = self.trig_idx + self.per_scans
+                    break
+                k += 1
+
+    def _import_huntttrig_down(self, src, origidx):
+        k = 0
+        if self.trig_primed<PRIMELIM:
+            while k<src.size:
+                if src[k]>self.trig_revert:
+                    self.trig_primed += 1
+                    if self.trig_primed>=PRIMELIM:
+                        break
+                else:
+                    self.trig_primed = 0
+                k += 1
+        if self.trig_primed>=PRIMELIM:
+            while k<src.size:
+                if src[k]<self.trig_volt and origidx+k>=self.pretrig_scans:
+                    self.trig_idx = origidx + k
+                    self.nexttrigok_idx = self.trig_idx + self.per_scans
+                    break
+                k += 1
+
+    def _import_autotrig(self):
+        dx = self.nextautotrig_idx - self.read_idx
+        if dx<self.pretrig_scans:
+            self.trig_idx = self.read_idx + self.pretrig_scans
+        else:
+            self.trig_idx = self.nextautotrig_idx
+            self.read_idx = self.trig_idx - self.pretrig_scans
+        self.nexttrigok_idx = self.trig_idx + self.per_scans
+        self.nextautotrig_idx = self.trig_idx + 2*self.per_scans + self.cfg.hw.acqrate.value
+        self.trigAvailable.emit()        
+
+    def _import_triggered(self):
+        self.trig_primed = 0
+        self.read_idx = self.trig_idx - self.pretrig_scans
+        if self.cfg.trig.auto:
+            self.nextautotrig_idx = self.trig_idx + 2*self.per_scans + self.cfg.hw.acqrate.value
+        #lock = None
+        print("triggered", self.read_idx, self.write_idx)
+        self.trigAvailable.emit()
+
+        
     def importData(self):
         #lock = QMutexLocker(self.mutex)
         origidx = self.write_idx
         relidx = self.write_idx % self.buffer.shape[0]
-        offset = self.write_idx//self.buffer.shape[0]
+        offset = self.write_idx // self.buffer.shape[0]
         offset *= self.buffer.shape[0]
         nrows = self.source.getData(self.buffer[relidx:,:])
+        if nrows == 0:
+            return
+        
         self.write_idx += nrows
+        
         if self.cfg.trig.enable:
             if self.trig_idx is not None:
-                #lock = None
                 self.dataAvailable.emit()
-                #lock = QMutexLocker(self.mutex)
-                if self.write_idx-self.trig_idx >= self.posttrig_scans:
-                    self.trig_idx=None
-            elif origidx>=self.nexttrigok_idx:
+                if self.write_idx - self.trig_idx >= self.posttrig_scans:
+                    self.trig_idx = None
+
+            elif origidx >= self.nexttrigok_idx:
+                
                 src = self.buffer[relidx:relidx+nrows, self.trig_column]
-                if self.cfg.trig.direction>0:
-                    k = 0
-                    if self.trig_primed<PRIMELIM:
-                        while k<src.size:
-                            if src[k]<self.trig_revert:
-                                self.trig_primed += 1
-                                if self.trig_primed>=PRIMELIM:
-                                    break
-                            else:
-                                self.trig_primed = 0
-                            k += 1
-                    if self.trig_primed>=PRIMELIM:
-                        while k<src.size:
-                            if src[k]>self.trig_volt and origidx+k>=self.pretrig_scans:
-                                self.trig_idx = origidx + k
-                                self.nexttrigok_idx = self.trig_idx + self.per_scans
-                                break
-                            k += 1
+                if self.cfg.trig.direction > 0:
+                    self._import_hunttrig_up(src, origidx)
                 else:
-                    k = 0
-                    if self.trig_primed<PRIMELIM:
-                        while k<src.size:
-                            if src[k]>self.trig_revert:
-                                self.trig_primed += 1
-                                if self.trig_primed>=PRIMELIM:
-                                    break
-                            else:
-                                self.trig_primed = 0
-                            k += 1
-                    if self.trig_primed>=PRIMELIM:
-                        while k<src.size:
-                            if src[k]<self.trig_volt and origidx+k>=self.pretrig_scans:
-                                self.trig_idx = origidx + k
-                                self.nexttrigok_idx = self.trig_idx + self.per_scans
-                                break
-                            k += 1
+                    self._import_hunttrig_down(src, origidx)
+
                 if self.trig_idx is None:
-                    if origidx>=self.nextautotrig_idx:
-                        dx = self.nextautotrig_idx-self.read_idx
-                        if dx<self.pretrig_scans:
-                            self.trig_idx = self.read_idx + self.pretrig_scans
-                        else:
-                            self.trig_idx = self.nextautotrig_idx
-                            self.read_idx = self.trig_idx - self.pretrig_scans
-                        self.nexttrigok_idx = self.trig_idx + self.per_scans
-                        self.nextautotrig_idx = self.trig_idx + 2*self.per_scans + self.cfg.hw.acqrate.value
-                        #lock = None
-                        self.trigAvailable.emit()
-                    pass
+                    if origidx >= self.nextautotrig_idx:
+                        self._import_autotrig()
                 else:
-                    self.trig_primed = 0
-                    self.read_idx = self.trig_idx - self.pretrig_scans
-                    if self.cfg.trig.auto:
-                        self.nextautotrig_idx = self.trig_idx + 2*self.per_scans + self.cfg.hw.acqrate.value
-                    #lock = None
-                    self.trigAvailable.emit()
+                    self._import_triggered()
         else:
             #lock = None
             self.dataAvailable.emit()
@@ -174,16 +192,16 @@ class ESTriggerBuffer(ESDataSource):
             if self.trig_idx is None:
                 now = 0
             else:
-                now = min(self.write_idx-self.read_idx,
+                now = min(self.write_idx - self.read_idx,
                           dst.shape[0],
-                          self.trig_idx+self.posttrig_scans-self.read_idx)
+                          self.trig_idx + self.posttrig_scans - self.read_idx)
         else:
             now = min(self.write_idx - self.read_idx, dst.shape[0])
         if now==0:
             return 0
         
         i0 = self.read_idx % self.buffer.shape[0]
-        i1 = (self.read_idx+now) % self.buffer.shape[0]
+        i1 = (self.read_idx + now) % self.buffer.shape[0]
         if i1==0:
             i1 = self.buffer.shape[0]
         #print 'i0=',i0, 'i1=',i1, 'now=',now
@@ -199,7 +217,7 @@ class ESTriggerBuffer(ESDataSource):
 
         self.read_idx += now
         if self.capfh:
-            self.writeData(dst,now)
+            self.writeData(dst, now)
         return now
 
     def writeData(self, src, nscan):

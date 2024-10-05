@@ -96,12 +96,18 @@ class ESScopeWin(QWidget):
         #self.mutex = QMutex()
         self.dispStyle = 0
         # Display styles: 0=dots, 1=lines, 2=true blue
+        self.quitting = False
 
     def setDisplayStyle(self, sty):
         self.dispStyle = sty
         self.xx = None
         self.yy = None
         self.update()
+
+    def closeEvent(self, evt):
+        if not self.quitting:
+            self.quitting = True
+            QApplication.quit()
 
     def paintEvent(self, evt):
         p = QPainter(self)
@@ -261,24 +267,26 @@ class ESScopeWin(QWidget):
     def feedTrig(self):
         self.read_idx = 0
         self.write_idx = 0
-        self.feedData()
+        #self.feedData() #?
 
     def sweepIsComplete(self):
-        #print("sweepiscomplete", self.write_idx, self.dat.shape)
+        print("sweepiscomplete?", self.write_idx, self.dat.shape)
         return self.dat is not None and self.write_idx>=self.dat.shape[0]
 
     def feedData(self):
         #lock = QMutexLocker(self.mutex)
+        print("feeddata")
         if self.sweepIsComplete():
-            self.write_idx=0
-        if self.write_idx==0:
+            self.write_idx = 0
+        if self.write_idx == 0:
             self.dat_pre_s = self.cfg.hori.s_div * (self.cfg.trig.delay_div -
                                                     self.cfg.hori.xlim[0])
             self.dat_post_s = self.cfg.hori.s_div * (self.cfg.hori.xlim[1] -
                                                      self.cfg.trig.delay_div)
                                                  
         now = self.src.getData(self.dat[self.write_idx:,:])
-        if self.write_idx==0 and now>0:
+        print("now", now)
+        if self.write_idx==0 and now > 0:
             self.sweepStarted.emit()
         # print 'feeddata: ', self.write_idx, now, self.dat.shape[0]
         self.write_idx += now

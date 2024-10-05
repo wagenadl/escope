@@ -133,7 +133,7 @@ def color(cfg, k):
 
 def basicconfig():
     cfg = Struct()
-    cfg.VERSION = "escope-3.0"
+    cfg.VERSION = "escope-3"
 
     cfg.MAXCHANNELS = 8
     cfg.COLORS = [ (1,1,0), (0,.8,1), (1,0,1), (.3,1,.3),

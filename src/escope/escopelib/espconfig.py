@@ -242,7 +242,7 @@ def datetime():
     
 def basicconfig():
     cfg = Struct()
-    cfg.VERSION = "espark-3.0"
+    cfg.VERSION = "espark-3"
     cfg.MAXCHANNELS = _MAXCHANNELS
     cfg.FONTSIZE = 10
     f = QFont()
