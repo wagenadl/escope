@@ -1,7 +1,6 @@
 import numpy as np
 import json
-import matplotlib.pyplot as plt
-plt.ion()
+
 
 def load(fn: str) -> tuple[np.ndarray, dict]:
     '''Load a recording from EScope 3.0
@@ -34,6 +33,9 @@ def load(fn: str) -> tuple[np.ndarray, dict]:
 
     Use len(data.shape) to conveniently test whether multiple individual sweeps are 
     represented.
+
+    Note that scale factors are not applied. You will need to check info["scale"]
+    and apply them yourself.
     '''
 
     if fn.endswith(".dat"):
@@ -78,8 +80,12 @@ def plot(data: np.ndarray, info: dict):
     This function plots all the channels in a single figure;
     sweeps are concatenated together.
     '''
-    COLORS = [ [ 1, 1, 0 ], [ 0, 0.8, 1 ], [ 1, 0, 1 ], [ 0.3, 1, 0.3 ],
-               [ 1, 0, 0 ], [ 0, 0.6, 0 ], [ 0, 0, 1 ], [ 0.8, 0.5, 0 ] ]
+    COLORS = [ [ 0.9, 0.4, 0 ], [ 0, 0.6, 1 ], [ .8, 0, .9 ], [ 0., .8, 0. ],
+               [ .9, 0, 0 ], [ 0, 0.4, 0 ], [ 0, 0, .8 ], [ 0.5, 0.3, 0 ] ]
+
+
+    import matplotlib.pyplot as plt
+    plt.ion()
     
     hassweeps = len(data.shape) == 3
     plt.clf()
