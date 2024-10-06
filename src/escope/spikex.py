@@ -17,10 +17,10 @@ def _estimatemuckfactor(chunksize, nchunks=1000, ipart=25):
     return est
 
 
-def noiseest(dat, chunksize=300, percentile=25):
-    '''NOISEEST - Estimate noise in a data trace
+def rmsnoise(dat, chunksize=300, percentile=25):
+    '''RMSNOISE - Estimated RMS noise in a data trace
     
-    rms = NOISEEST(dat) estimates the RMS noise in the given data (a
+    rms = RMSNOISE(dat) estimates the RMS noise in the given data (a
     1-d numpy array).  It is relatively insensitive to genuine spikes
     and simulus artifacts because it splits the data into small chunks
     and does the estimation within chunks. It then bases the final
@@ -44,16 +44,18 @@ def noiseest(dat, chunksize=300, percentile=25):
     return est / cf
 
 
-def detectspikes(yy, threshold, polarity=0, tkill=50):
+def detectspikes(yy, threshold, polarity=0, tkill=50, upperthresh=None):
     '''DETECTSPIKES - Simple spike detection
     idx = DETECTSPIKES(yy, threshold) performs simple spike detection:
-      (1) Find peaks YY > THRESHOLD;
+      (1) Find peaks YY ≥ THRESHOLD;
       (2) Drop minor peaks within TKILL samples (default: 50) of major peaks;
-      (3) Repeat for peaks YY < -THRESHOLD.
+      (3) Repeat for peaks YY ≤ -THRESHOLD.
     Optional argument POLARITY limits to positive (or negative) peaks if
     POLARITY > 0 (or < 0).
+    Set TKILL=None to prevent step (2).
     A reasonable value for THRESHOLD could be 5× the value returned by
-    NOISEEST on your data.'''
+    RMSNOISE on your data.
+    If UPPERTHRESH is given, spikes higher than that are not reported.'''
 
     def droptoonear(ipk, hei, tkill):
         done = False
@@ -71,7 +73,7 @@ def detectspikes(yy, threshold, polarity=0, tkill=50):
             hei = hei[idx]
         return ipk
             
-    if polarity>=0:
+    if polarity >= 0:
         iup, idn = peakx.schmitt(yy, threshold, 0)
         ipk = peakx.schmittpeak(yy, iup, idn)
         if tkill is not None:
@@ -79,7 +81,7 @@ def detectspikes(yy, threshold, polarity=0, tkill=50):
     else:
         ipk = None   
 
-    if polarity<=0:
+    if polarity <= 0:
         zz = -yy
         iup, idn = peakx.schmitt(zz, threshold, 0)
         itr = peakx.schmittpeak(zz, iup, idn)
@@ -89,16 +91,21 @@ def detectspikes(yy, threshold, polarity=0, tkill=50):
         itr = None
 
     if ipk is None:
-        return itr
+        res = itr
     elif itr is None:
-        return ipk
+        res = ipk
     else:
-        return np.sort(np.append(ipk, itr))
+        res = np.sort(np.append(ipk, itr))
+
+    if upperthresh is not None:
+        res = res[np.abs(yy[res]) < upperthresh]
+
+    return res
 
     
-def cleancontext(idx, dat, test=(np.arange(-25,-12), np.arange(12,25)),
-                 testabs=(np.arange(-25,-4), np.arange(4,25)),
-                 thr=.50, absthr=.90):
+def cleancontext(idx, dat, test=[np.arange(-25, -12), np.arange(12, 25)],
+                 testabs=[np.arange(-25, -4), np.arange(4, 25)],
+                 thr=0.50, absthr=0.90):
     '''CLEANCONTEXT - Drop spikes if their context is not clean
     idx = CLEANCONTEXT(idx, dat) treats the spikes at IDX (from DETECTSPIKES
     run on DAT) to the classic filtering operation in MEABench. That is,
@@ -118,8 +125,10 @@ def cleancontext(idx, dat, test=(np.arange(-25,-12), np.arange(12,25)),
     unconditionally.'''
 
     keep = np.zeros(idx.shape, dtype=idx.dtype)
-    test = np.concatenate(test)
-    testabs = np.concatenate(testabs)
+    if type(test)==list:
+        test = np.concatenate(test)
+    if type(testabs)==list:
+        testabs = np.concatenate(testabs)
     t0 = np.min([np.min(test), np.min(testabs)])
     t1 = np.max([np.max(test), np.max(testabs)])
     T = len(dat)
@@ -127,44 +136,17 @@ def cleancontext(idx, dat, test=(np.arange(-25,-12), np.arange(12,25)),
     pol = np.sign(hei)
     for k in range(len(idx)):
         t = idx[k]
-        if t+t0 < 0 or t+t1 >= T:
+        if t + t0 < 0 or t + t1 >= T:
             continue
         if thr is not None:
             if pol[k]>0:
-                if any(dat[t+test] > thr*hei[k]):
+                if any(dat[t + test] > thr*hei[k]):
                     continue
             else:
-                if any(dat[t+test] < thr*hei[k]):
+                if any(dat[t + test] < thr*hei[k]):
                     continue
         if absthr is not None:
-            if any(np.abs(dat[t+testabs]) > absthr*np.abs(hei[k])):
+            if any(np.abs(dat[t + testabs]) > absthr*np.abs(hei[k])):
                 continue
         keep[k] = t
     return keep[keep > 0]
-
-
-if __name__ == '__main__':
-    import scipy.signal
-    import pyqplot as qp
-    b, a = scipy.signal.butter(3, .1)
-    N = 1000
-    tt = np.arange(N) / 1e3
-    rnd = np.random.randn(N)
-    flt = scipy.signal.filtfilt(b, a, rnd)
-    qp.figure('/tmp/s1')
-    qp.pen('b', 1)
-    qp.plot(tt, flt)
-    idx = detectspikes(flt, .1, tkill=0)
-    qp.pen('r')
-    qp.marker('o', 2)
-    qp.mark(tt[idx], flt[idx])
-    id2 = cleancontext(idx, flt)
-    qp.marker('o', 4, fill='open')
-    qp.pen('g', 1)
-    qp.mark(tt[id2], flt[id2])
-    qp.pen('k', .5)
-    qp.xaxis()
-    qp.yaxis()
-    qp.shrink()
-
-    
