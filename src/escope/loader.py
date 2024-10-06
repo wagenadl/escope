@@ -1,5 +1,6 @@
 import numpy as np
 import json
+from .units import Units
 
 
 def load(fn: str) -> tuple[np.ndarray, dict]:
@@ -86,7 +87,18 @@ def plot(data: np.ndarray, info: dict):
 
     import matplotlib.pyplot as plt
     plt.ion()
-    
+
+    units = []
+    factors = []
+    C = data.shape[0]
+    for c in range(C):
+        scale = info["scale"][c]
+        uni = " ".join(scale.split(" ")[1:]) # drop numeric prefix
+        if uni == 'V':
+            uni = 'mV'
+        units.append(uni)
+        factors.append(Units(scale).asunits(uni))
+
     hassweeps = len(data.shape) == 3
     plt.clf()
     if hassweeps:
@@ -94,12 +106,71 @@ def plot(data: np.ndarray, info: dict):
         tt = np.arange(L) / info['rate_Hz']
         for n in range(N):
             for c in range(C):
-                plt.plot(tt, data[c,n], color=COLORS[c])
+                plt.plot(tt, data[c,n] * factors[c], color=COLORS[c])
     else:
         C, T = data.shape
         tt = np.arange(T) / info['rate_Hz']
         for c in range(C):
-            plt.plot(tt, data[c], color=COLORS[c])
+            plt.plot(tt, data[c] * factors[c], color=COLORS[c])
     plt.xlabel('Time (s)')
-    plt.legend([f"{chn} ({scl})" for chn, scl in zip(info['channels'], info['scale'])])
+    plt.legend([f"{chn} ({uni})" for chn, scl in zip(info['channels'], units)])
     plt.title(info['rundate'])
+
+
+class Recording:
+    '''Object-oriented access to EScope data'''
+
+    def __init__(self, filename):
+        '''Load a recording from a .escope file.'''
+        self._data, self._info = load(filename)
+
+    def rawdata(self, channel=None):
+        '''Raw data from the recording.
+
+        For continuous acquisition or a single sweep, data are
+        returned as a CxT array where C is the number of channels and
+        T is the number of samples. For triggered acquisition, data
+        are returned as a CxNxT array, where N is the number of
+        triggers and T is the number of samples per sweep.
+
+        '''
+        if channel is None:
+            return self._data
+        else:
+            return self._data[channel]
+        
+    def info(self):
+        '''Basic info about the recording as a dictionary.
+        '''
+        return self._info
+
+    def data(self, channel, units=None):
+        '''Data for a given channel and corresponding units.
+        
+        You may also specify desired units, in which case the
+        appropriate scale factor will be applied. In that case, units
+        are not also returned from the function.
+
+        For continuous acquisition or a single sweep, data are
+        returned as a length T vector where T is the number of samples
+        in the recording. For triggered acquisition, data are returned
+        as an NxT array, where N is the number of triggers and T is
+        the number of samples per sweep.
+        '''
+        
+        scale = self._info["scale"][channel]
+        if units is None:
+            units = " ".join(scale.split(" ")[1:]) # drop numeric prefix
+            return Units(self._data[channel], scale).asunits(units), units
+        else:
+            return Units(self._data[channel], scale).asunits(units)
+
+    def time(self):
+        '''Timestamp vector in seconds.'''
+        T = self._data.shape[-1]
+        return np.arange(T) / self._info["rate_Hz"]
+
+    def plot(self):
+        '''Quick plot of the entire recording.'''
+        plot(self._data, self._info)
+        
