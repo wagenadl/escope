@@ -69,3 +69,10 @@ In Windows, after you run the software in this fashion once, you
 should be able to run it from the start menu as well. (If you know
 of a way to make “pip” create a start menu entry, please contact
 me or open an [Issue](https://github.com/wagenadl/escope/issues).)
+
+## Data analysis
+
+EScope includes 
+[a jupyter notebook](https://github.com/wagenadl/escope/blob/main/eg-data/egdata.ipynb) 
+showing how to load the data it saves. You can also 
+[open it in colab](https://colab.research.google.com/github/wagenadl/escope/blob/main/eg-data/egdata.ipynb). 
