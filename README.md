@@ -65,3 +65,7 @@ or
 
     espark
     
+In Windows, after you run the software in this fashion once, you
+should be able to run it from the start menu as well. (If you know
+of a way to make “pip” create a start menu entry, please contact
+me or open an [Issue](https://github.com/wagenadl/escope/issues).)

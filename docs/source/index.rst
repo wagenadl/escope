@@ -9,17 +9,20 @@ aimed primarily but not exclusively at electrophysiology.
 Screenshots
 ===========
 
+EScope running in “demo” mode on Linux without a DAQ card:
+
 .. image:: escope.png
-           :width: 400
+           :width: 600
            :align: center
            :class: no-scaled-link
+                   
+ESpark running on Windows:
                    
 .. image:: espark.png
-           :width: 400
+           :width: 600
            :align: center
            :class: no-scaled-link
                    
-
 Features
 ========
 
@@ -77,4 +80,13 @@ To run the software, open a terminal and type either
 or
 
     espark
-    
+ 
+In Windows, after you run the software in this fashion once, you
+should be able to run it from the start menu as well. (If you know
+of a way to make “pip” create a start menu entry, please contact
+me or open an `Issue on github <https://github.com/wagenadl/escope/issues`_.)
+
+Development
+===========
+
+Development occurs on `github <https://github.com/wagenadl/escope>`_.
