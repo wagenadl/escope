@@ -374,6 +374,37 @@ def fillpulse(cfg, k, itr, ipu, vv):
     else:
         raise ValueError(f'Unknown pulsetype: {typ}')
 
+def hastrainchange(cfg, k):
+    if cfg.pulse[k].type.have1dur():
+        if cfg.pulse[k].dur1_s.delta:
+            return True
+    if cfg.pulse[k].type.have2durUSE():
+        if cfg.pulse[k].dur2_s.delta:
+            return True
+    if cfg.pulse[k].type.have1amp():
+        if cfg.pulse[k].amp1_u.delta:
+            return True
+    if cfg.pulse[k].type.have2amp():
+        if cfg.pulse[k].amp2_u.delta:
+            return True
+    return False
+
+def haspulsechange(cfg, k):
+    if cfg.pulse[k].type.have1dur():
+        if cfg.pulse[k].dur1_s.delti:
+            return True
+    if cfg.pulse[k].type.have2durUSE():
+        if cfg.pulse[k].dur2_s.delti:
+            return True
+    if cfg.pulse[k].type.have1amp():
+        if cfg.pulse[k].amp1_u.delti:
+            return True
+    if cfg.pulse[k].type.have2amp():
+        if cfg.pulse[k].amp2_u.delti:
+            return True
+    return False
+
+
 def mkpulse(cfg, k, itr, ipu):
     fs_hz = cfg.hw.genrate.value
     if cfg.pulse[k].type.have1dur():

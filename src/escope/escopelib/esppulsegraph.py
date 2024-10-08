@@ -35,18 +35,17 @@ class ESPPulseGraph(ESPGraph):
                                        itr*
                                        self.cfg.train[self.k].npulses.delta)):
                     (xx, yy) = espconfig.mkpulse(self.cfg, self.k, itr, ipu)
-                    self.plot(xx*1e3, yy*scl,[.7,.7,.7])
+                    self.plot(xx*1e3, yy*scl, [.7, .7, .7])
             for itr in range(1,int(self.cfg.train[self.k].ntrains.base)):
                 (xx, yy) = espconfig.mkpulse(self.cfg, self.k, itr, 0)
-                self.plot(xx*1e3, yy*scl,[.4,.4,.4])
+                self.plot(xx*1e3, yy*scl, [.4, .4, .4])
             for ipu in range(1,int(self.cfg.train[self.k].npulses.base)):
                 (xx, yy) = espconfig.mkpulse(self.cfg, self.k, 0, ipu)
-                self.plot(xx*1e3, yy*scl,[0,1.,1.])
+                self.plot(xx*1e3, yy*scl, [.3, .5, 1])
             
             (xx, yy) = espconfig.mkpulse(self.cfg, self.k, 0, 0)
             self.plot(xx*1e3, yy*scl)
         self.setXLabel('(ms)')
-        self.setYLabel('(%s)' %
-                       espconfig.scaleunit(self.cfg.conn.units[self.k],
-                                           mul))
+        scl = espconfig.scaleunit(self.cfg.conn.units[self.k], mul)
+        self.setYLabel(f'({scl})')
         self.autolim()

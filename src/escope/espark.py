@@ -21,6 +21,11 @@ from .escopelib.ledlabel import LEDLabel
 from .escopelib import espsinks
 from .escopelib import serializer
 
+VERSION = "3.2.0"
+
+_PULSECOL=3
+_TRAINCOL=2
+
 class MainWin(QWidget):
     def __init__(self, cfg):
         QWidget.__init__(self)
@@ -132,10 +137,10 @@ class MainWin(QWidget):
         grlay.addWidget(lbl)
         #llay.addStretch(1)
         #grlay.addLayout(llay)
-        self.traingraph[k] = ESPTrainGraph(self.cfg, k)
-        grlay.addWidget(self.traingraph[k])
         self.pulsegraph[k] = ESPPulseGraph(self.cfg, k)
         grlay.addWidget(self.pulsegraph[k])
+        self.traingraph[k] = ESPTrainGraph(self.cfg, k)
+        grlay.addWidget(self.traingraph[k])
         return grlay
 
     def stylizeLabels(self, hh):
@@ -156,31 +161,31 @@ class MainWin(QWidget):
         def addBiTrain(varname, lbl, y):
             hh = addMonoTrain(varname, lbl, y)
             h = ESPVarEdit(self.cfg, 'train', k, varname, 'delta')
-            trbutlay.addWidget(h, y, 2)
+            trbutlay.addWidget(h, y, _TRAINCOL)
             hh['delta'] = h
             return hh
         def addTriTrain(varname, lbl, y):
             hh = addBiTrain(varname, lbl, y)
             h = ESPVarEdit(self.cfg, 'train', k, varname, 'delti')
-            trbutlay.addWidget(h, y ,3)
+            trbutlay.addWidget(h, y, _PULSECOL)
             hh['delti']=h
             return hh
 
         self.htr[k] = {}
-        self.htr[k]['ntrains'] = addMonoTrain('ntrains','# trains',0)
-        self.htr[k]['period_s'] = addBiTrain('period_s','Train period',1)
+        self.htr[k]['ntrains'] = addMonoTrain('ntrains','# trains', 0)
+        self.htr[k]['period_s'] = addBiTrain('period_s','Train period', 1)
         self.htr[k]['period_s']['label'].setToolTip("Period is measured start to start. This number is also used for the (end-to-start) interval between repeated runs.")
-        self.htr[k]['npulses'] = addBiTrain('npulses','# pulses',2)
-        self.htr[k]['ipi_s'] = addTriTrain('ipi_s','Pulse period',3)
+        self.htr[k]['npulses'] = addBiTrain('npulses','# pulses', 2)
+        self.htr[k]['ipi_s'] = addTriTrain('ipi_s','Pulse period', 3)
         self.htr[k]['ipi_s']['label'].setToolTip("Period is measured start to start.")
-        self.htr[k]['delay_s'] = addMonoTrain('delay_s','Delay',4)
+        self.htr[k]['delay_s'] = addMonoTrain('delay_s','Delay', 4)
         if k==0 and False:
             self.htr[k]['delay_s']['base'].setVisible(False)
             self.htr[k]['delay_s']['label'].setText(' ')
         trnal = QLabel('Chg./train:')
-        trbutlay.addWidget(trnal,0,2)
+        trbutlay.addWidget(trnal, 0, _TRAINCOL)
         trnil = QLabel('Chg./pulse:')
-        trbutlay.addWidget(trnil,2,3)
+        trbutlay.addWidget(trnil, 2, _PULSECOL)
         self.stylizeLabels([trnal, trnil])
         return trbutlay
 
@@ -195,31 +200,31 @@ class MainWin(QWidget):
         def addBiPulse(varname, lbl, y):
             hh=addMonoPulse(varname, lbl, y)
             h = ESPVarEdit(self.cfg, 'pulse', k, varname, 'delta')
-            pubutlay.addWidget(h, y, 2)
+            pubutlay.addWidget(h, y, _TRAINCOL)
             hh['delta'] = h
             return hh
         def addTriPulse(varname, lbl, y):
             hh = addBiPulse(varname, lbl, y)
             h = ESPVarEdit(self.cfg, 'pulse', k, varname, 'delti')
-            pubutlay.addWidget(h, y ,3)
+            pubutlay.addWidget(h, y, _PULSECOL)
             hh['delti'] = h
             return hh
 
         self.hpu[k] = {}
         putl = QLabel('Pulse type:')
-        pubutlay.addWidget(putl,0,0)
+        pubutlay.addWidget(putl, 0, 0)
         put = ESPTypeBox(self.cfg, k)
         pubutlay.addWidget(put,0,1)
         self.hpu[k]['type'] = {'label': putl, 'base': put}
         punal = QLabel('Chg./train:')
-        pubutlay.addWidget(punal,0,2)
+        pubutlay.addWidget(punal, 0, _TRAINCOL)
         punil = QLabel('Chg./pulse:')
-        pubutlay.addWidget(punil,0,3)
-        self.hpu[k]['amp1_u'] = addTriPulse('amp1_u','Amplitude',1)
-        self.hpu[k]['dur1_s'] = addTriPulse('dur1_s','Duration',2)
-        self.hpu[k]['amp2_u'] = addTriPulse('amp2_u','2nd amp.',3)
+        pubutlay.addWidget(punil, 0, _PULSECOL)
+        self.hpu[k]['amp1_u'] = addTriPulse('amp1_u','Amplitude', 1)
+        self.hpu[k]['dur1_s'] = addTriPulse('dur1_s','Duration', 2)
+        self.hpu[k]['amp2_u'] = addTriPulse('amp2_u','2nd amp.', 3)
         self.hpu[k]['amp2_u']['label'].setToolTip("or vertical offset for sine")
-        self.hpu[k]['dur2_s'] = addTriPulse('dur2_s','2nd dur.',4)
+        self.hpu[k]['dur2_s'] = addTriPulse('dur2_s','2nd dur.', 4)
         self.hpu[k]['dur2_s']['label'].setToolTip("or phase shift for sine")
         self.stylizeLabels([punal, punil])
         return pubutlay
@@ -233,11 +238,11 @@ class MainWin(QWidget):
         vlay.addLayout(grlay)
 
         allbutlay = QHBoxLayout()
-        trbutlay = self.makeTrainLayout(k)
-        allbutlay.addLayout(trbutlay)
-        allbutlay.addSpacing(10)
         pubutlay = self.makePulseLayout(k)
         allbutlay.addLayout(pubutlay)
+        allbutlay.addSpacing(10)
+        trbutlay = self.makeTrainLayout(k)
+        allbutlay.addLayout(trbutlay)
         vlay.addLayout(allbutlay)
 
         for ky in self.htr[k]:
@@ -500,7 +505,7 @@ class MainWin(QWidget):
 
     def click_about(self):
         abt = QMessageBox()
-        abt.setText("ESpark v. 3.1.0\n(C) Daniel Wagenaar 2010, 2023–24")
+        abt.setText(f"ESpark v. {VERSION}\n(C) Daniel Wagenaar 2010, 2023–24")
         abt.setWindowTitle("About ESpark")
         abt.exec_()
 
@@ -552,7 +557,7 @@ class MainWin(QWidget):
 
 ######################################################################
 def main():
-    print("This is ESpark")
+    print(f"This is ESpark {VERSION}")
     os.chdir(os.path.expanduser("~/Documents"))
     if not os.path.exists("EScopeData"):
         os.mkdir("EScopeData")
