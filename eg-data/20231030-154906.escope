@@ -1,0 +1,9 @@
+{
+  "version": "escope-3.2",
+  "rundate": "20231030-154906",
+  "rate_Hz": 20000.0,
+  "channels": [ "ai0", "ai5" ],
+  "scale": [ "1 mV", "1 mV" ],
+  "sweep_s": 0.5,
+  "sweep_scans": 10000
+}
