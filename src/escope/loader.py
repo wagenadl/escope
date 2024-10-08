@@ -7,7 +7,7 @@ from .units import Units
 
 def _readurl(url, binary=False):
     if url.startswith("http"):
-        with urllib.request.openurl(url) as fd:
+        with urllib.request.urlopen(url) as fd:
             data = fd.read()
             if binary:
                 return data
@@ -70,10 +70,8 @@ def load(fn: str) -> tuple[np.ndarray, dict]:
     config = json.loads(_readurl(fn + ".config"))
 
     if info["version"] >= "escope-3.2":
-        print("new version")
         data = np.frombuffer(data, dtype=np.float32)
     else:
-        print("old version")
         data = np.frombuffer(data)
     
     C = len(info['channels'])
