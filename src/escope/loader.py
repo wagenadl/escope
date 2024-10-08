@@ -1,6 +1,25 @@
 import numpy as np
 import json
+import urllib
+
 from .units import Units
+
+
+def _readurl(url, binary=False):
+    if url.startswith("http"):
+        with urllib.request.openurl(url) as fd:
+            data = fd.read()
+            if binary:
+                return data
+            else:
+                return data.decode('utf-8')
+    else:
+        if binary:
+            with open(url, "rb") as fd:
+                return fd.read()
+        else:
+            with open(url, "rt") as fd:
+                return fd.read()
 
 
 def load(fn: str) -> tuple[np.ndarray, dict]:
@@ -46,13 +65,16 @@ def load(fn: str) -> tuple[np.ndarray, dict]:
     elif fn.endswith(".escope"):
         fn = fn[:-7]
 
-    with open(fn + ".escope") as fd:
-        info = json.load(fd)
-    with open(fn + ".dat", "rb") as fd:
-        data = fd.read()
-    with open(fn + ".config") as fd:
-        config = json.load(fd)
-    data = np.frombuffer(data)
+    info = json.loads(_readurl(fn + ".escope"))
+    data = _readurl(fn + ".dat", binary=True)
+    config = json.loads(_readurl(fn + ".config"))
+
+    if info["version"] >= "escope-3.2":
+        print("new version")
+        data = np.frombuffer(data, dtype=np.float32)
+    else:
+        print("old version")
+        data = np.frombuffer(data)
     
     C = len(info['channels'])
     if config['trig']['enable'] and config["capt_enable"]:

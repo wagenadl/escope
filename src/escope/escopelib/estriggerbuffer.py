@@ -221,7 +221,7 @@ class ESTriggerBuffer(ESDataSource):
         return now
 
     def writeData(self, src, nscan):
-        self.capfh.write(src[:nscan,:])
+        self.capfh.write(src[:nscan,:].astype(np.float32))
     
 if __name__ == "__main__":
     app = QApplication(sys.argv)

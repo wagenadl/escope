@@ -21,7 +21,7 @@ from .escopelib.esscopewin import ESScopeWin
 from .escopelib.estriggerbuffer import ESTriggerBuffer
 from .escopelib import serializer
 
-VERSION = "3.1.6"
+VERSION = "3.2.0"
 
 #class FittingView(QGraphicsView):
 #    def __init__(self,scene=None,parent=None):
@@ -378,7 +378,7 @@ class MainWin(QWidget):
         dat = self.apane.dat[:self.apane.write_idx,:]
         name = f"{self.rundate}-{self.sweepno:03d}"
         f = open(name + ".dat", "wb")
-        f.write(dat)
+        f.write(dat.astype(np.float32))
         f.close()
         self.writeInfoFile(name)
 
