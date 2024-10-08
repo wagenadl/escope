@@ -1,13 +1,27 @@
-<img alt="EScope and ESpark" src="https://github.com/wagenadl/escope/blob/main/docs/source/banner.svg" width="100%">
+.. image:: banner.svg
+           :width: 900
+           :align: center
+           :class: no-scaled-link
+                   
 EScope and ESpark are a software oscilloscope and function generator
 aimed primarily but not exclusively at electrophysiology.
 
-## Screenshots
+Screenshots
+===========
 
-<img alt="EScope screenshot" src="https://github.com/wagenadl/escope/blob/main/docs/source/escope.png" width="45%">
-<img alt="ESpark screenshot" src="https://github.com/wagenadl/escope/blob/main/docs/source/espark.png" width="45%">
-                              
-## Features
+.. image:: escope.png
+           :width: 400
+           :align: center
+           :class: no-scaled-link
+                   
+.. image:: espark.png
+           :width: 400
+           :align: center
+           :class: no-scaled-link
+                   
+
+Features
+========
 
 EScope can display traces from up to eight analog inputs
 simultaneously, optionally using one of them as a trigger input. As on
@@ -25,7 +39,8 @@ driven concurrently. The software displays previews of the signals to
 be generated making it particularly easy for students to design
 complex stimuli.
 
-## Compatibility
+Compatibility
+=============
 
 EScope and ESpark are compatible with most National Instruments
 multifunction data acquisition boards and does not require a LabView
@@ -38,19 +53,22 @@ only with “software timing”, which is completely useless.) If they do
 not properly support yours, the best I can suggest is that you loudly
 demand your money back.
 
-## Prerequisites
+Prerequisites
+=============
 
 To use with NI hardware, you first need to install the NIDAQmx
 software. This is not necessary on computers where you only wish to
 analyze data you acquired on another computer.
 
-## Installation
+Installation
+============
 
 Installation is as easy as
 
     pip install escope
     
-## Running
+Running
+=======
 
 To run the software, open a terminal and type either
 
