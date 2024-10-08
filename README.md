@@ -4,11 +4,11 @@ aimed primarily but not exclusively at electrophysiology.
 
 ## Screenshots
 
+EScope running in “demo” mode on Linux without a DAQ card:
 <img alt="EScope screenshot" src="https://github.com/wagenadl/escope/blob/main/docs/source/escope.png" width="80%">
-EScope running in “demo” mode on Linux without a DAQ card
 
+ESpark running on Windows:
 <img alt="ESpark screenshot" src="https://github.com/wagenadl/escope/blob/main/docs/source/espark.png" width="80%">
-ESpark running on Windows
                               
 ## Features
 

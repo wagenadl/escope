@@ -270,12 +270,12 @@ class ESScopeWin(QWidget):
         #self.feedData() #?
 
     def sweepIsComplete(self):
-        print("sweepiscomplete?", self.write_idx, self.dat.shape)
+        #print("sweepiscomplete?", self.write_idx, self.dat.shape)
         return self.dat is not None and self.write_idx>=self.dat.shape[0]
 
     def feedData(self):
         #lock = QMutexLocker(self.mutex)
-        print("feeddata")
+        #print("feeddata")
         if self.sweepIsComplete():
             self.write_idx = 0
         if self.write_idx == 0:
@@ -285,7 +285,7 @@ class ESScopeWin(QWidget):
                                                      self.cfg.trig.delay_div)
                                                  
         now = self.src.getData(self.dat[self.write_idx:,:])
-        print("now", now)
+        #print("now", now)
         if self.write_idx==0 and now > 0:
             self.sweepStarted.emit()
         # print 'feeddata: ', self.write_idx, now, self.dat.shape[0]
@@ -317,8 +317,8 @@ if __name__ == '__main__':
     if True:
         xx = np.random.rand(1000,1)
         ymin = np.zeros(20)
-        trueblue(xx,0,1,ymin)
-        print(ymin)
+        trueblue(xx, 0, 1, ymin)
+        #print(ymin)
 
     app = QApplication(sys.argv)
     cfg = esconfig.basicconfig()

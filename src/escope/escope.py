@@ -21,6 +21,8 @@ from .escopelib.esscopewin import ESScopeWin
 from .escopelib.estriggerbuffer import ESTriggerBuffer
 from .escopelib import serializer
 
+VERSION = "3.1.6"
+
 #class FittingView(QGraphicsView):
 #    def __init__(self,scene=None,parent=None):
 #        QGraphicsView.__init__(self,scene,parent)
@@ -104,6 +106,7 @@ class MainWin(QWidget):
         dsp.addItem('True')
         #dsp.setFixedHeight(20)
         dsp.currentIndexChanged.connect(self.click_display)
+        self.displaystyle = dsp
 
         self.hdate = QLabel()
         self.hdate.setText(esconfig.datetimestr())
@@ -448,7 +451,7 @@ class MainWin(QWidget):
 
     def click_about(self):
         abt = QMessageBox()
-        abt.setText("EScope v. 3.1.0\n(C) Daniel Wagenaar 2010, 2023, 2024")
+        abt.setText(f"EScope v. {VERSION}\n(C) Daniel Wagenaar 2010, 2023, 2024")
         abt.setWindowTitle("About EScope")
         abt.exec_()
 
@@ -459,17 +462,18 @@ class MainWin(QWidget):
         QApplication.quit()
 
 def main():
-    print('This is EScope')
+    print(f'This is EScope {VERSION}')
     os.chdir(os.path.expanduser("~/Documents"))
     if not os.path.exists("EScopeData"):
         os.mkdir("EScopeData")
     os.chdir("EScopeData")
     app = QApplication(sys.argv)
     cfg = esconfig.basicconfig()
-    # cfg.trig.enable = True
-    # cfg.trig.source = 1
-    # cfg.vert.offset_div[1] = -.5
+
     mw = MainWin(cfg)
+
+    mw.displaystyle.setCurrentIndex(2)
+    mw.displaystyle.hide() # on modern computer hardware, this control is not needed
     mw.show()
     app.exec_()
     
