@@ -2,5 +2,6 @@ dist
 .idea
 build
 *egg*
+venv
 __pycache__
 .ipynb_checkpoints

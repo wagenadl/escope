@@ -1,11 +1,12 @@
 import numpy as np
 import json
 import urllib
+from typing import List, Optional, Union, Tuple
 
 from .units import Units
 
 
-def _readurl(url, binary=False):
+def _readurl(url: str, binary: bool = False) -> Union[str, bytes]:
     if url.startswith("http"):
         with urllib.request.urlopen(url) as fd:
             data = fd.read()
@@ -139,45 +140,56 @@ def plot(data: np.ndarray, info: dict):
 
 
 class Recording:
-    '''Object-oriented access to EScope data'''
+    '''Object-oriented access to EScope data
 
-    def __init__(self, filename):
+    The constructor loads data from a “.escope” file. If the name starts
+    with “http://” or “https://”, the file is downloaded from the internet.
+    
+    '''
+
+    def __init__(self, filename: str):
         '''Load a recording from a .escope file.'''
         self._data, self._info = load(filename)
 
-    def rawdata(self, channel=None):
-        '''Raw data from the recording.
-
-        For continuous acquisition or a single sweep, data are
-        returned as a CxT array where C is the number of channels and
-        T is the number of samples. For triggered acquisition, data
-        are returned as a CxNxT array, where N is the number of
-        triggers and T is the number of samples per sweep.
-
-        '''
-        if channel is None:
-            return self._data
-        else:
-            return self._data[channel]
-        
-    def info(self):
-        '''Basic info about the recording as a dictionary.
+    def info(self) -> dict:
+        '''Information about the recording as a dictionary.
         '''
         return self._info
 
-    def data(self, channel, units=None):
+    def data(self, channel: int | str,
+             units: Optional[str] = None) \
+             -> Union[np.ndarray | Tuple[np.ndarray, str]]:
         '''Data for a given channel and corresponding units.
-        
-        You may also specify desired units, in which case the
-        appropriate scale factor will be applied. In that case, units
-        are not also returned from the function.
+
+        Arguments
+        ---------
+
+        channel
+            An integer index specifying the channel number or a
+            string name for the channel (which must exist in the
+            "channels" of the info() dict.
+
+        units (optional)
+            Desired units for returned data
+
+        Returns
+        -------
+
+        If *units* are specified, the raw data are converted into those
+        units and only the result is returned.
+
+        If *units* are not specified, a tuple of data and their units
+        is returned.
 
         For continuous acquisition or a single sweep, data are
-        returned as a length T vector where T is the number of samples
+        returned as a length-T vector where T is the number of samples
         in the recording. For triggered acquisition, data are returned
         as an NxT array, where N is the number of triggers and T is
         the number of samples per sweep.
         '''
+
+        if type(channel)==str:
+            channel = self._info["channels"].index(channel)
         
         scale = self._info["scale"][channel]
         if units is None:
@@ -186,12 +198,43 @@ class Recording:
         else:
             return Units(self._data[channel], scale).asunits(units)
 
-    def time(self):
+    def time(self) -> np.ndarray:
         '''Timestamp vector in seconds.'''
+
         T = self._data.shape[-1]
         return np.arange(T) / self._info["rate_Hz"]
 
-    def plot(self):
+    def plot(self) -> None:
         '''Quick plot of the entire recording.'''
+        
         plot(self._data, self._info)
+        
+    def rawdata(self, channel: Optional[int] = None) -> np.ndarray:
+        '''Raw data from the recording.
+
+        Arguments
+        ---------
+        channel (optional)
+            An integer index specifying the channel number.
+
+        Returns
+        -------
+
+        Data for a single channel or all channels
+
+        For continuous acquisition or a single sweep, data are
+        returned as a CxT array where C is the number of channels and
+        T is the number of samples. For triggered acquisition, data
+        are returned as a CxNxT array, where N is the number of
+        triggers and T is the number of samples per sweep.
+
+        If *channel* is specified, the result is either a length-T
+        vector or an NxT array.
+
+        '''
+        
+        if channel is None:
+            return self._data
+        else:
+            return self._data[channel]
         

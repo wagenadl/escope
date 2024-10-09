@@ -1,4 +1,4 @@
 #!/bin/sh
 
 mkdir -p build
-sphinx-build -bhtml ./source ./build 
+python3 /bin/sphinx-build -bhtml ./source ./build 

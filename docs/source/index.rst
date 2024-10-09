@@ -14,20 +14,22 @@ aimed primarily but not exclusively at electrophysiology.
 Screenshots
 -----------
 
-EScope running in “demo” mode on Linux without a DAQ card:
 
-.. image:: escope.png
-           :width: 600
-           :align: center
-           :class: no-scaled-link
+.. figure:: escope.png
+    :width: 600
+    :align: center
+    :class: no-scaled-link
+
+    EScope running in “demo” mode on Linux without a DAQ card
                    
-ESpark running on Windows:
                    
-.. image:: espark.png
-           :width: 600
-           :align: center
-           :class: no-scaled-link
-                   
+.. figure:: espark.png
+    :width: 600
+    :align: center
+    :class: no-scaled-link
+
+    ESpark running on Windows
+              
 Features
 --------
 
@@ -47,8 +49,8 @@ driven concurrently. The software displays previews of the signals to
 be generated making it particularly easy for students to design
 complex stimuli.
 
-Installation
-============
+Actual installation
+===================
 
 Compatibility
 -------------
@@ -87,11 +89,11 @@ Using the software
 Running from the command prompt
 -------------------------------
 
-To run the software, open a terminal and type either
+To run the software, open a terminal and type either::
 
     escope
 
-or
+or::
 
     espark
  
@@ -107,12 +109,13 @@ showing how to load the data it saves. You can also `open it in colab <https://c
 User guides
 -----------
 
+For more details on how to use the software, read these chapters:
+
 .. toctree::
    :maxdepth: 1
-   :caption: For more details on how to use the software, read these chapters:
 
-   escope
-   espark
+   escope-bin
+   espark-bin
    library
 
 Development
@@ -123,8 +126,9 @@ Development occurs on `github <https://github.com/wagenadl/escope>`_.
 License information
 ===================
 
+EScope and ESpark are free software. Read what that means here:
+ 
 .. toctree::
    :maxdepth: 1
-   :caption: EScope and ESpark are free software. Read what that means here:
 
    license

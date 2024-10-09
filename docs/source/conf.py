@@ -10,9 +10,9 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+import os
+import sys
+sys.path.insert(0, os.path.abspath('../../src/'))
 
 ## import sys
 ## sys.path.insert(0, "../../python")
@@ -24,7 +24,7 @@ copyright = '2024, Daniel A. Wagenaar'
 author = 'Daniel A. Wagenaar'
 
 # The full version, including alpha/beta/rc tags
-release = '3.1.0'
+release = '3.3.0'
 
 
 # -- General configuration ---------------------------------------------------
@@ -36,7 +36,8 @@ extensions = [
     'sphinx.ext.duration',
     'sphinx.ext.doctest',
     'sphinx.ext.autodoc',
-    'sphinx.ext.autosectionlabel'
+    'sphinx.ext.autosectionlabel',
+    'sphinx_rtd_theme'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -53,9 +54,9 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'classic'
+html_theme = 'sphinx_rtd_theme'
 html_theme_options = {
-    "stickysidebar": "true"
+    #"stickysidebar": "true"
     }
 #html_show_sourcelink = False
 html_sidebars = {
@@ -65,13 +66,15 @@ html_sidebars = {
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
-html_css_files = [
-    #'cschem.css',
-]
+#html_static_path = ['_static']
+#html_css_files = [
+#    #'cschem.css',
+#]
 
 
 latex_engine = 'xelatex'
 latex_elements = {
     'extraclassoptions': 'openany'
     }
+
+autodoc_member_order = 'bysource'

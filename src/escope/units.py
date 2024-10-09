@@ -18,7 +18,7 @@
 
 import re
 import numpy as np
-
+from typing import Optional
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #% Prepare unit database
@@ -178,60 +178,108 @@ def _factordecode(fac):
 
 
 class Units:
-    '''UNITS - Class for unit conversion
+    '''Class for unit conversion
+    
+    Examples
+    --------
+    
+      Units("4 lbs").asunits("kg") → 1.814
+    
+      Units("3 V / 200 mA").asunits("Ohm") → 15.0
 
-    Examples: Units('4 lbs').asunits('kg') -> 1.814
-              Units('3 V / 200 mA').asunits('Ohm') -> 15.0
-              Units('psi').definition() -> '6894.7573 kg m^-1 s^-2'
+      Units("psi").definition() → "6894.7573 kg m^-1 s^-2"
 
-    The full syntax for unit specification is like this:
+    Syntax
+    ------
+    
+    The full syntax for unit specification is:
+    
+    BASEUNIT
+        m | s | g | A | mol
+    
+    PREFIX
+        m | u | n | p | f | k | M | G | T
+    
+    ALTUNIT
+        meter | meters | second | seconds | sec | secs |
+        gram | grams | gm | amp | amps | ampere | amperes | 
+        Amp | Ampere | Amperes
+    
+    ALTPREFIX
+        milli | micro | μ | nano | pico | femto | kilo |
+        mega | Mega | giga | Giga | tera | Tera
+    
+    DERIVEDUNIT
+        in | inch | Hz | Hertz | hertz | cyc | cycles |
+        V | volt | Volt | volts | Volts |
+        N | newton | Newton | newtons | Newtons |
+        Pa | pascal | bar | atm | torr |
+        J | joule | joules | Joule | Joules |
+        barn |
+        Ohm | Ohms | ohm | ohms | mho | Mho
+    
+    UNIT
+        (PREFIX | ALTPREFIX)? (BASEUNIT | ALTUNIT | DERIVEDUNIT)
 
-    BASEUNIT = m | s | g | A | mol
-    PREFIX = m | u | n | p | f | k | M | G | T
-    ALTUNIT = meter | meters | second | seconds | sec | secs |
-              gram | grams | gm | amp | amps | ampere | amperes | 
-              Amp | Ampere | Amperes
-    ALTPREFIX = milli | micro | μ | nano | pico | femto | kilo |
-                mega | Mega | giga | Giga | tera | Tera
-    DERIVEDUNIT = in | inch | Hz | Hertz | hertz | cyc | cycles |
-                  V | volt | Volt | volts | Volts |
-                  N | newton | Newton | newtons | Newtons |
-                  Pa | pascal | bar | atm | torr |
-                  J | joule | joules | Joule | Joules |
-                  barn | 
-                  Ohm | Ohms | ohm | ohms | mho | Mho
-    UNIT = (PREFIX | ALTPREFIX)? (BASEUNIT | ALTUNIT | DERIVEDUNIT)
-    DIGITS = [0-9]
-    INTEGER = ('-' | '+')? DIGIT+
-    NUMBER = ('-' | '+')? DIGIT* ('.' DIGIT*)? ('e' ('+' | '-') DIGIT*)?
-    POWFRAC = INTEGER ('|' INTEGER)?
-    POWERED = UNIT ('^' POWFRAC)?
-    FACTOR = POWERED | NUMBER
-    MULTI = FACTOR (' ' MULTI)?
-    FRACTION = MULTI ('/' MULTI)?
+    DIGITS
+        [0-9]
 
+    INTEGER
+        ('-' | '+')? DIGIT+
+
+    NUMBER
+        ('-' | '+')? DIGIT* ('.' DIGIT*)? ('e' ('+' | '-') DIGIT*)?
+
+    POWFRAC
+        INTEGER ('|' INTEGER)?
+
+    POWERED
+        UNIT ('^' POWFRAC)?
+
+    FACTOR
+        POWERED | NUMBER
+
+    MULTI
+        FACTOR (' ' MULTI)?
+
+    FRACTION
+        MULTI ('/' MULTI)?
+    
     Thus, the following would be understood:
+    
+      'kg m / s^2'
+          That's a newton
+    
+      'J / Hz^1|2'
+          Joules per root-Hertz
+    
+    Notes
+    -----
+    
+    Multiplication is implicit; do not attempt to write '*'.
+    
+    Fractions in exponents must be written with '|' rather than '/',
+    as '|' binds more tightly than '^'.
+    
+    Division marked by '/' binds most loosely, e.g,
+    
+       'kg / m s' – kilogram per meter per second
+    
+    Syntax checking is not overly rigorous. Some invalid expressions may
+    return meaningless values without a reported error.
+    
+    '''
 
-      'kg m / s^2' - That's a newton
-      'J / Hz^1|2' - Joules per root-Hertz
-
-    NOTES:
-
-    - Multiplication is implicit; do not attempt to write '*'.
-    - Fractions in exponents are written with '|' rather than '/'. '|' binds
-      more tightly than '^'. 
-    - Division marked by '/' binds most loosely, e.g,
-
-       'kg / m s' - kilogram per meter per second
-
-    - Syntax checking is not overly rigorous. Some invalid expressions may
-      return meaningless values without a reported error.'''
-
-    def __init__(self, value, unit=None):
-        '''Constructor - Store a value with associated units
+    def __init__(self, value: float | np.ndarray | str,
+                 unit: Optional[str] = None):
+        '''Store a value with associated units
+        
         UNITS(value, units), where VALUE is a number and UNITS a string,
         stores the given quantity. For instance, UNITS(9.81, 'm / s^2').
-        For convenience, UNITS('9.81 m/s^2') also works.'''
+        For convenience, UNITS('9.81 m/s^2') also works.
+        
+        '''
+        
         if unit is None:
             unit = value
             value = 1
@@ -240,9 +288,27 @@ class Units:
 
         
     def definition(self, withoutvalue=False):
-        '''DEFINITION - Definition of stored value in SI units
-        DEFINITION() returns the definition of the stored unit in terms
-        of SI base units.'''
+        '''Definition of stored value in SI units
+
+        Parameters
+        ----------
+
+        withoutvalue
+           If given as True, only the base unit is returned, not the
+           value-with-units
+
+        Returns
+        --------
+        The definition of the stored unit in terms of SI base units.
+
+        Examples
+        --------
+
+        Units("2 lb").definition() → “0.907 kg”
+        
+        Units("psi").definition(True) → “kg m^-1 s^-2”
+        
+        '''
         val = self.value * self.mul
         ss = []
         for un, co in zip(_unitcode.keys(), self.code):
@@ -262,13 +328,32 @@ class Units:
         return ' '.join(ss)
 
                 
-    def asunits(self, newunit, warn=False):
-        '''ASUNITS - Convert to different units
-        ASUNITS(newunits) converts the stored quantity to the given new
-        units. An exception is raised if the units are incompatible.
+    def asunits(self, newunit: str, warn=False) -> float | np.ndarray:
+        '''Convert to different units
+
+        Parameters
+        ----------
+
+        newunit
+            string representation of unit to convert to
+
+        Returns
+        -------
+
+        The conversion result. The shape and data type of the result
+        will match the original *value* passed into the *Units*
+        constructor.
+
+        Notes
+        ------
+        
+        An exception is raised if the units are incompatible.
+
         Optional argument WARN, if True, turns that into a warning.
+
         See the class documentation for unit syntax and note that
-        addition or subtraction is not supported.'''
+        addition or subtraction is not supported.
+        '''
         newmul, newcode = _fracdecode(newunit)
         if np.any(self.code != newcode):
             if warn:
@@ -277,13 +362,3 @@ class Units:
                 raise ValueError(f'Units {newunit} do not match {self.definition(True)}')
         return self.value * self.mul / newmul
 
-    
-def convert(newunit, value, unit=None, warn=False):
-    '''CONVERT - Unit conversion
-    newval = CONVERT(newunit, value, unit) converts a VALUE expressed in 
-    some UNIT to NEWUNIT using the UNITS class. It is simply a convenience
-    function for UNITS(value, unit).asunits(newunit).
-    For instance, CONVERT('cm', 2, 'inch') returns 5.08.
-    As a convenience, CONVERT('cm', '2 inch') also works.'''
-
-    return Units(value, unit).asunits(newunit, warn)

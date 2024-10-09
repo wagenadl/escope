@@ -1,9 +1,9 @@
 from numba import jit
 import numpy as np
-
+from typing import Optional, Tuple
 
 @jit
-def schmittcore(data, thr_on, thr_off):
+def _schmittcore(data, thr_on, thr_off):
     trans = []
     isup = False
     for k in range(len(data)):
@@ -14,26 +14,67 @@ def schmittcore(data, thr_on, thr_off):
     ioff = trans[1::2]
     return ion, ioff
 
+class STARTTYPE:
+    DROP_PARTIAL = 0
+    INCLUDE_PARTIAL = 1
+    
+class ENDTYPE:
+    DROP_PARTIAL = 0
+    BROKEN_PARTIAL = 1
+    INCLUDE_PARTIAL = 2
+    
 
-def schmitt(data, thr_on=None, thr_off=None, endtype=2, starttype=1):
-    '''SCHMITT  Schmitt trigger of a continuous process.
-    [ion, ioff] = SCHMITT(data, thr_on, thr_off) implements a Schmitt trigger:
-    ION are the indices when DATA crosses up through THR_ON coming from 
-    below THR_OFF;
-    IOFF are the indices when DATA crosses down through THR_OFF coming from 
-    above THR_ON.
-    If DATA is high at the beginning, the first ION value will be 0, unless
-    optional argument STARTTYPE = 0, in which case any such "partial peak"
-    is dropped.
-    If DATA is high at the end, the last downward crossing will be len(DATA).
-    Optional argument ENDTYPE modifies this behavior:
-      ENDTYPE = 0: Ignore last upward crossing if there is no following downward
-                   crossing.  
-      ENDTYPE = 1: Simply report last upward crossing without a corresponding
-                   downward crossing; ION may be one longer than IOFF.
-    If THR_OFF is not specified, it defaults to THR_ON/2.
-    If neither THR_ON nor THR_OFF are specified, THR_ON=2/3 and THR_OFF=1/3.'''
+def schmitt(data: np.ndarray,
+            thr_on: Optional[float] = None,
+            thr_off: Optional[float] = None,
+            endtype: int = ENDTYPE.INCLUDE_PARTIAL,
+            starttype: int = STARTTYPE.INCLUDE_PARTIAL) \
+            -> Tuple[np.array, np.array]:
+    """Schmitt trigger of a continuous process
 
+    Parameters
+    ----------
+
+    data
+        The data to trawl for threshold crossings
+
+    thr_on
+        The upward threshold. If not given, defaults to 2/3.
+
+    thr_off
+        The downward threshold. If not given, defaults to ½ *thr_on*
+
+    endtype
+        If DATA is high at the end, the last downward crossing will
+        be len(DATA). This optional argument modifies this behavior:
+
+        If set to ENDTYPE.DROP_PARTIAL (0), the last upward crossing
+        is ignored if there is no following downward crossing.
+
+        If set to ENDTYPE.BROKEN_PARTIAL (1), the last upward crossing
+        may be reported without a corresponding downward crossing, so 
+        the two return values do not have the same length.
+    
+    starttype
+        If DATA is high at the beginning, the first ION value will
+        be 0. This optional argument modifies this behavior:
+
+        If set to STARTTYPE.DROP_PARTIAL (0), such a “partial peak”
+        is dropped.
+
+    Returns
+    -------
+
+    ion
+        The indices where DATA crosses up through *thr_on* coming from
+        below *thr_off*
+
+    ioff
+        The indices where DATA crosses down through *thr_off* coming from
+        above *thr_on*
+
+    """
+    
     if thr_on is None:
         if data.dtype==bool:
             thr_on = True
@@ -47,7 +88,7 @@ def schmitt(data, thr_on=None, thr_off=None, endtype=2, starttype=1):
     if data.ndim != 1:
         raise ValueError('Input must be 1-d array')
 
-    iup, idn = schmittcore(data, thr_on, thr_off)
+    iup, idn = _schmittcore(data, thr_on, thr_off)
 
     if endtype==0:
         if len(iup)>len(idn):
@@ -72,27 +113,53 @@ def schmitt(data, thr_on=None, thr_off=None, endtype=2, starttype=1):
     return np.array(iup), np.array(idn)
 
 
-def schmitt2(data, thr_a, thr_b):
-    '''SCHMITT2 - Double Schmitt triggering
-    [on_a,off_a,on_b,off_b] = SCHMITT2(data, thr_a, thr_b) Schmitt triggers
-    twice. It is required that THR_B < THR_A.
+def schmitt2(data: np.array, thr_a: float, thr_b: float) \
+        -> Tuple[np.array, np.array, np.array, np.array]:
+    '''Double Schmitt triggering
 
-    There are three equivalent ways to think about the result:
+    Arguments
+    ---------
+
+    data
+        The data to trawl for threshold crossings
+
+    thr_a
+        The “high” threshold
+
+    thr_b
+        The “low” threshold
+
+    Returns
+    -------
+
+    on_a
+        the up crossings through *thr_a*
+
+    off_a
+        the down crossings through *thr_a*
+
+    on_b
+        the up crossings through *thr_b*
+
+    off_b
+        the down corssings through *thr_b*
+
+    Notes
+    -----
+
+    It is required that THR_B < THR_A.
+
+    There are two equivalent ways to think about the result:
     
-    (1) ON_A, OFF_A are the up and down crossings through THR_A;
-        ON_B, OFF_B are the up and down crossings through THR_B.
+    (1) *on_a*, *off_a* are the up and down crossings through *thr_a*;
+        *on_b*, *off_b* are the up and down crossings through *thr_b*.
 
-    (2) ON_A, OFF_A describe the broadest possible peak above THR_A;
-        ON_B, OFF_B describe the narrowest possible peak above THR_B.
-        (But ON_B, OFF_B describe wider peaks than ON_A, OFF_A,
-        since THR_B<THR_A.)
+    (2) *on_a*, *off_a* describe the broadest possible peak above *thr_a*;
+        *on_b*, *off_b* describe the narrowest possible peak above *thr_b*.
+        (But *on_b*, *off_b* describe wider peaks than *on_a*, *off_a*,
+        since *thr_b* < *thr_a*.)
    
-    (3) ON_A mark the first point where DATA >= THR_A.
-        OFF_A mark the first point where DATA < THR_A.
-        ON_B mark the first point where XX >= THR_B.
-        OFF_B mark the first point where XX < THR_B.
-
-    Note that a peak that exceeds THR_B but never exceeds THR_A is not
+    A peak that exceeds *thr_b* but never exceeds *thr_a* is not
     reported.'''
    
     on_a, off_b = schmitt(data, thr_a, thr_b)
@@ -101,17 +168,45 @@ def schmitt2(data, thr_a, thr_b):
     on_b = np.flip(len(data) - on_b)
     return on_a, off_a, on_b, off_b
 
-def schmittpeak(data, iup, idn):
-    '''SCHMITTPEAK - Finds peaks in data after Schmitt triggering
-    ipk = SCHMITTPEAK(data, iup, idn) returns the indices of the peaks 
-    between each pair of threshold crossings. IUP and IDN must be from
-    SCHMITT. Partial peaks at beginning and end of DATA _are_ considered,
-    so use starttype=0 and/or endtype=0 when calling SCHMITT.'''
+
+def schmittpeak(data: np.array, iup: np.array, idn: np.array) -> np.array:
+    '''Find peaks in data after Schmitt triggering
+
+    Arguments
+    ---------
+
+    data
+        The data to trawl for threshold crossings
+
+    ion
+        The indices where DATA crosses up through *thr_on* coming from
+        below *thr_off*, as returned by a previous call to *schmitt*
+
+    ioff
+        The indices where DATA crosses down through *thr_off* coming from
+        above *thr_on*, as returned by a previous call to *schmitt*
+
+
+    Returns
+    -------
+
+    Indices of peaks between pairs of upward and downward threshold
+    crossings.
+
+    Notes
+    -----
+
+    To avoid partial peaks at the beginning and end of *data*, consider
+    using *starttype* = STARTTYPE.DROP_PARTIAL and/or
+    *endtype* = ENDTYPE.DROP_PARTIAL when calling *schmitt*.
+
+    '''
 
     ipk = np.zeros(iup.shape, dtype=iup.dtype)
     for k in range(len(iup)):
         ipk[k] = iup[k]+ np.argmax(data[iup[k]:idn[k]])
     return ipk
+
 
 if __name__=='__main__':
     data = np.random.randn(100)

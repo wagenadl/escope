@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 
 import numpy as np
+from typing import List, Optional
+
 from . import peakx
 
 
@@ -17,21 +19,46 @@ def _estimatemuckfactor(chunksize, nchunks=1000, ipart=25):
     return est
 
 
-def rmsnoise(dat, chunksize=300, percentile=25):
-    '''RMSNOISE - Estimated RMS noise in a data trace
+def rmsnoise(dat: np.ndarray[float],
+             chunksize: int = 300,
+             percentile: int = 25) -> float:
+    '''Estimated RMS noise in a data trace
+
+    Arguments
+    ---------
+
+    dat
+        The data to be investigated as a length-T vector
+
+    chunksize (optional)
+        The number of samples per chunk. Reasonable values are
+        whatever corresponds to 5 or 10 ms at your sampling rate.
+
+    percentile (optional)
+        The percentile at which to sample the chunks. Usually, the
+        default is reasonable, but if you have extremely high firing
+        rates, a lower number may work better.
+
+    Returns
+    -------
+
+    The estimated RMS noise in the data
+
+    Description
+    ------------
     
-    rms = RMSNOISE(dat) estimates the RMS noise in the given data (a
-    1-d numpy array).  It is relatively insensitive to genuine spikes
-    and simulus artifacts because it splits the data into small chunks
-    and does the estimation within chunks. It then bases the final
-    answer on the 25th percentile of estimates in chunks and corrects
-    based on assumption of approximate Gaussianity. 
+    The data are split into small chunks and the RMS signal power is
+    calculated for each chunk. In some of the chunks, that power will
+    be dominated by the presence of spike or stimulus artifacts.
+    However, in a decent fraction of chunks there are no spikes, so
+    the RMS power in those chunks represents the actual RMS noise.
+    
+    This function attempts to extract the RMS noise from such chunks
+    by sorting the chunks by their signal power, and finding the 25-th
+    percentile. It corrects the result based on assumption of
+    approximate Gaussianity.
 
-    Optional argument CHUNKSIZE specifies the length of chunks, in
-    samples; good results are usually obtained when CHUNKSIZE corresponds
-    to about 10 to 20 milliseconds of data.
-
-    PERCENTILE specifies an alternative percentile for estimation. '''
+    '''
 
     chunksize = int(chunksize)
     L = len(dat)
@@ -44,18 +71,50 @@ def rmsnoise(dat, chunksize=300, percentile=25):
     return est / cf
 
 
-def detectspikes(yy, threshold, polarity=0, tkill=50, upperthresh=None):
-    '''DETECTSPIKES - Simple spike detection
-    idx = DETECTSPIKES(yy, threshold) performs simple spike detection:
-      (1) Find peaks YY ≥ THRESHOLD;
-      (2) Drop minor peaks within TKILL samples (default: 50) of major peaks;
-      (3) Repeat for peaks YY ≤ -THRESHOLD.
-    Optional argument POLARITY limits to positive (or negative) peaks if
-    POLARITY > 0 (or < 0).
-    Set TKILL=None to prevent step (2).
-    A reasonable value for THRESHOLD could be 5× the value returned by
-    RMSNOISE on your data.
-    If UPPERTHRESH is given, spikes higher than that are not reported.'''
+def detectspikes(yy: np.ndarray[float],
+                 threshold: float,
+                 polarity: int = 0,
+                 tkill: int = 50,
+                 upperthresh: Optional[float] = None) -> np.ndarray[int]:
+    """Simple spike detection
+
+    Parameters
+    ----------
+    yy
+        A NumPy array of floats representing the data
+
+    threshold
+        The threshold for spike detection. Typically, 5× the value
+        from *rmsnoise* is a reasonable threshold.
+
+    polarity (optional)
+        The polarity of the spikes (0 for both, 1 for positive,
+        -1 for negative)
+
+    tkill (optional)
+        The minimum distance between spikes (in samples)
+
+    upperthresh (optional)
+        The maximum spike amplitude. If given, peaks that exceed it
+        are not returned, so you can use *detectspikes* iteratively
+        for very basic spike sorting.
+
+    Returns
+    -------
+
+    A numpy array of integers indicating the indices of detected
+    spikes within the recording
+
+    Description
+    -----------
+
+    The algorithm first finds peaks (positive and/or negative
+    depending on the *polarity* parameter) that exceed the
+    threshold. Then, it drops minor peaks that are within *tkill*
+    samples of major peaks. Finally, peaks that exceed *upperthresh*
+    (if given) are discarded.
+
+    """
 
     def droptoonear(ipk, hei, tkill):
         done = False
@@ -103,9 +162,11 @@ def detectspikes(yy, threshold, polarity=0, tkill=50, upperthresh=None):
     return res
 
     
-def cleancontext(idx, dat, test=[np.arange(-25, -12), np.arange(12, 25)],
-                 testabs=[np.arange(-25, -4), np.arange(4, 25)],
-                 thr=0.50, absthr=0.90):
+def cleancontext(idx: np.ndarray[int], dat: np.ndarray[float],
+                 test: List[range] = [range(-25, -12), range(12, 25)],
+                 testabs: List[range] = [range(-25, -4), range(4, 25)],
+                 thr: float = 0.50,
+                 absthr: float = 0.90) -> np.ndarray[int]:
     '''CLEANCONTEXT - Drop spikes if their context is not clean
     idx = CLEANCONTEXT(idx, dat) treats the spikes at IDX (from DETECTSPIKES
     run on DAT) to the classic filtering operation in MEABench. That is,
