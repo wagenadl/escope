@@ -76,3 +76,7 @@ EScope includes
 [a jupyter notebook](https://github.com/wagenadl/escope/blob/main/eg-data/egdata.ipynb) 
 showing how to load the data it saves. You can also 
 [open it in colab](https://colab.research.google.com/github/wagenadl/escope/blob/main/eg-data/egdata.ipynb). 
+
+## Extended documentation
+
+Full documentation is at [readthedocs.io](https://escope.readthedocs.io).
