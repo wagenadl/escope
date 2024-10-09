@@ -20,23 +20,10 @@ from .escopelib.estmarks import ESTMarks
 from .escopelib.esscopewin import ESScopeWin
 from .escopelib.estriggerbuffer import ESTriggerBuffer
 from .escopelib import serializer
+from .escopelib.ledlabel import LEDLabel
 
-VERSION = "3.2.0"
+VERSION = "3.3.0"
 
-#class FittingView(QGraphicsView):
-#    def __init__(self,scene=None,parent=None):
-#        QGraphicsView.__init__(self,scene,parent)
-#        self.setLineWidth(0)
-#        self.setFrameShape(QFrame.NoFrame)
-#        s=self.scene()
-#        if s!=None:
-#            s.setBackgroundBrush(QColor("#404040"))
-#    def resizeEvent(self, e):
-#        s = self.scene()
-#        if s!=None:
-#            r = s.sceneRect()
-#            if r.isValid() and not(r.isEmpty()):
-#                self.fitInView(r)
     
 class MainWin(QWidget):
     def __init__(self,cfg):
@@ -85,6 +72,11 @@ class MainWin(QWidget):
         tr.setText("Trigger...")
         tr.clicked.connect(self.click_trigger)
 
+
+        ll = LEDLabel()
+        ll.setToolTip("Indicates whether data are currently being acquired")
+        self.h_led = ll
+        
         rn = QPushButton()
         rn.setText("Run")
         self.h_run = rn
@@ -135,6 +127,7 @@ class MainWin(QWidget):
         butlay.addWidget(abt)
         
         but2lay = QHBoxLayout()
+        but2lay.addWidget(ll)
         but2lay.addWidget(rn)
         but2lay.addWidget(sp)
         but2lay.addWidget(ca)
@@ -239,11 +232,16 @@ class MainWin(QWidget):
 
     def click_capture(self, on):
         self.cfg.capt_enable = not not on
+        if self.cfg.capt_enable:
+            self.h_led.setColor([1, 0, 0], [0.2, 1, 0.3])
+        else:
+            self.h_led.setColor([0.2, 1, 0.3])            
         self.restart()
 
     def startRun(self):
         self.h_run.hide()
         self.h_stop.show()
+        self.h_led.turnOn()
         self.stopRequested = False
         self.inSweep = False
         self.ds = ESTriggerBuffer(self.cfg)
@@ -290,6 +288,7 @@ class MainWin(QWidget):
         print('Stopped')
         self.h_run.show()
         self.h_stop.hide()
+        self.h_led.turnOff()
 
     def sweepComplete(self):
         self.inSweep = False
@@ -367,10 +366,11 @@ class MainWin(QWidget):
             js["scale"] = scl
             js["sweep_s"] = self.cfg.hori.s_div*(self.cfg.hori.xlim[1] - self.cfg.hori.xlim[0])
             js["sweep_scans"] = int(js["sweep_s"] * self.cfg.hw.acqrate.value)
+            js["config"] = self.cfg
             serializer.dump(js, fd)
                                            
-        with open(name + ".config", "w") as fd:
-            serializer.dump(self.cfg, fd)
+        #with open(name + ".config", "w") as fd:
+        #    serializer.dump(self.cfg, fd)
 
     def saveSweep(self):
         if self.apane.dat is None:
@@ -386,7 +386,7 @@ class MainWin(QWidget):
         # dlg = QFileDialog()
         # dlg.setFileMode(QfileDialog.ExistingFile)
         # dlg.setNameFilter()
-        name = QFileDialog.getOpenFileName(self,
+        name, _ = QFileDialog.getOpenFileName(self,
                                            "Load Sweep",
                                            os.getcwd(),
                                            "EScope files (*.escope)")
@@ -406,25 +406,32 @@ class MainWin(QWidget):
             wasRunning = self.ds is not None
             if wasRunning:
                 self.stopRun()
-            f = open(name,"rb")
-            cfg = pickle.load(f)
-            f.close()
-            nch = 0
-            for a in cfg.conn.hw:
-                if not np.isnan(a):
-                    nch += 1
-            f = open(name[:-7] + ".dat","rb")
-            nscans = int(cfg.hw.acqrate.value *
-                         cfg.hori.s_div * 
-                         (cfg.hori.xlim[1] - cfg.hori.xlim[0]))
-            nfloats = nscans * nch
-            f.seek(-nfloats*8,os.SEEK_END) # Ugly hardcoded sizeof(double)
-            dat = np.fromfile(f,count = nfloats)
-            nend = f.tell()
-            if sweepno is None:
-                sweepno = int(nend/nfloats/8)
-            f.close()
-            dat = dat.reshape((len(dat)/nch, nch))
+                
+            with open(name, "r") as fd:
+                esc = serializer.load(fd)
+            if "config" in esc:
+                cfg = esc["config"]
+            else:
+                with open(name[:-7] + ".config") as fd:
+                    cfg = serializer.load(fd)
+            nch = len(esc["channels"])
+            with open(name[:-7] + ".dat", "rb") as f:
+                nscans = int(cfg.hw.acqrate.value *
+                             cfg.hori.s_div * 
+                             (cfg.hori.xlim[1] - cfg.hori.xlim[0]))
+                nfloats = nscans * nch
+                if esc["version"] >= "escope-3.2":
+                    typ = np.float32
+                    siz = 4
+                else:
+                    typ = np.float64
+                    siz = 8
+                    f.seek(-nfloats*siz, os.SEEK_END)
+                dat = np.fromfile(f, dtype=typ, count=nfloats)
+                nend = f.tell()
+                if sweepno is None:
+                    sweepno = nend // nfloats // siz
+            dat = dat.reshape(len(dat) // nch, nch)
             self.cfg.hw = cfg.hw
             self.cfg.conn = cfg.conn
             self.cfg.trig = cfg.trig

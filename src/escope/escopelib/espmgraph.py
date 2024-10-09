@@ -8,8 +8,9 @@ from matplotlib.figure import Figure
 
 class ESPGraph(FigureCanvas):
     def __init__(self, parent=None):
+        super().__init__(parent)
         fig = Figure()
-        self.axes = fig.add_axes([0.20,0.20,.78,.78])
+        self.axes = fig.add_axes([0.20, 0.20, 0.75, 0.78])
         # self.axes = fig.add_subplot(111)
         # self.axes.hold(True)
         FigureCanvas.__init__(self, fig)
@@ -28,6 +29,9 @@ class ESPGraph(FigureCanvas):
         
     def cla(self):
         self.axes.cla()
+        self.axes.set_facecolor('#ffffff')
+        for s in self.axes.spines.values():
+            s.set_color('#000000')
 
     def plot(self,x,y, col=[0.,0.,1.]):
         return self.axes.plot(x,y, color=col)
@@ -40,6 +44,14 @@ class ESPGraph(FigureCanvas):
         dy = (yy[1]-yy[0])/20
         self.axes.set_xlim((xx[0]-dx,xx[1]+dx))
         self.axes.set_ylim((yy[0]-dy,yy[1]+dy))
+        self.draw()
+
+    def noticks(self):
+        self.axes.set_xticks([])
+        self.axes.set_yticks([])
+        self.axes.set_facecolor('#eeeeee')
+        for s in self.axes.spines.values():
+            s.set_color('#aaaaaa')
         self.draw()
 
 if __name__ == '__main__':

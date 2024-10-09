@@ -152,17 +152,24 @@ def unniceunit(s, uni):
     and converts the result to the given UNIT.
     For instance, UNNICEUNIT('2.3 mV','uV') return 2300.
     If the conversion fails (e.g., because of incompatible units), the 
-    result is NaN."""
+    result is NaN. However, '0' is always acceptable. """
     
-    prf='pnum kMG'
-    prv=10.**np.array([-12, -9, -6, -3, 0, 3, 6, 9, np.inf])
-    mul=1;
-    if len(uni)>1:
+    prf = 'pnum kMG'
+    prv = 10.**np.array([-12, -9, -6, -3, 0, 3, 6, 9, np.inf])
+    mul = 1;
+    if len(uni) > 1:
         if uni[0] in prf:
-            mul=prv[prf.index(uni[0])]
-            uni=uni[1:]
-    
-    if len(uni)>0:
+            mul = prv[prf.index(uni[0])]
+            uni = uni[1:]
+
+    try:
+        barenum = float(s)
+        if barenum == 0:
+            return 0
+    except ValueError:
+        pass
+            
+    if len(uni) > 0:
         if s[-len(uni):] != uni:
             return np.nan
         s = s[:-len(uni)]
@@ -173,7 +180,7 @@ def unniceunit(s, uni):
         s = s[:-1]
     try:
         return float(s) / mul
-    except:
+    except ValueError:
         return np.nan
        
 
@@ -204,8 +211,8 @@ def genrates(ada):
     if typ=='nidaq':
         # Get min and max from hardware?
         pass
-    sr.values = reasonable(sr.min,sr.max)
-    sr.value = sr.values[int(len(sr.values)/2)]
+    sr.values = reasonable(sr.min, sr.max)
+    sr.value = sr.values[np.argmin((sr.values-10000)**2)]
     return sr
 
 def outputchannels(ada):
@@ -329,13 +336,13 @@ def filltrain(cfg, k, timing, vvv):
     for itr in range(int(cfg.train[k].ntrains.base)):
         for ipu in range(int(cfg.train[k].npulses.base +
                              itr*cfg.train[k].npulses.delta)):
-            fillpulse(cfg,k,itr,ipu,
+            fillpulse(cfg, k, itr, ipu,
                       vvv[int(timing[1][itr,ipu]):int(timing[2][itr,ipu]+1)])
 
 def mktrain(cfg, k):
     timing = mktiming(cfg, k)
     marg = max(timing[0]//20, 2)
-    ttt = (np.arange(-marg+1, timing[0]+marg+1))/cfg.hw.genrate.value
+    ttt = (np.arange(-marg, timing[0]+marg))/cfg.hw.genrate.value
     vvv = np.zeros(ttt.shape)
     filltrain(cfg, k, timing, vvv[marg:])
     return (ttt, vvv)
@@ -405,7 +412,7 @@ def haspulsechange(cfg, k):
     return False
 
 
-def mkpulse(cfg, k, itr, ipu):
+def mkpulse(cfg, k, itr, ipu, margin=True):
     fs_hz = cfg.hw.genrate.value
     if cfg.pulse[k].type.have1dur():
         dur1 = int(fs_hz * (cfg.pulse[k].dur1_s.base +
@@ -420,9 +427,12 @@ def mkpulse(cfg, k, itr, ipu):
     else:
         dur2 = 0
 
-    marg = max((dur1+dur2)//20, 2)
+    if margin:
+        marg = max((dur1+dur2)//20, 2)
+    else:
+        marg = False
 
-    tt = (np.arange(-marg+1, dur1+dur2+marg+1))/fs_hz
+    tt = (np.arange(-marg, dur1+dur2+marg)) / fs_hz
     vv = np.zeros(tt.shape)
     fillpulse(cfg, k, itr, ipu, vv[marg:])
     return (tt, vv)

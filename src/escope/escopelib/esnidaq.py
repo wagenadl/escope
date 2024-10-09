@@ -16,7 +16,7 @@ try:
 except ImportError:
     nidaq = None
     print("no nidaqmx")
-
+        
 #%%
 # Some constants
 if nidaq:
@@ -268,3 +268,12 @@ class FiniteProdTask:
                 if self.dth is not None:
                     self.dth.close()
                     self.dth = None
+
+######################################################################
+if nidaq:
+    try:
+        deviceList()
+    except nidaqmx.errors.DaqNotFoundError as e:
+        nidaq = None
+        print(e)
+                    

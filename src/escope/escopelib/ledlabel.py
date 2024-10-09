@@ -7,17 +7,22 @@ from PyQt5.QtWidgets import *
 
 class LEDLabel(QLabel):
     SIZE = 24
-    def __init__(self, color=[.2,1,.3], lit=False):
+    def __init__(self, color=[.2, 1, .3], lit=False):
         super().__init__()
         self.color = color
+        self.colorb = color
         self.lit = lit
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.setMinimumSize(self.SIZE, self.SIZE)
         self.setMaximumSize(self.SIZE, self.SIZE)
         self.rebuild()
 
-    def setColor(self, color):
+    def setColor(self, color, colorb=None):
         self.color = color
+        if colorb is None:
+            self.colorb = self.color
+        else:
+            self.colorb = colorb
         self.rebuild()
 
     def turnOn(self, on=True):
@@ -32,7 +37,7 @@ class LEDLabel(QLabel):
         if self.lit:
             clr = self.color
         else:
-            clr = [x/3.0 for x in self.color]
+            clr = [x/3.0 for x in self.colorb]
         rgba = f"rgba({int(255*clr[0])}, {int(255*clr[1])}, {int(255*clr[2])}, 255)"
         clrb = [x/2 for x in clr]
         rgbb = f"rgba({int(255*clrb[0])}, {int(255*clrb[1])}, {int(255*clrb[2])}, 255)"

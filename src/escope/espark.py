@@ -21,7 +21,7 @@ from .escopelib.ledlabel import LEDLabel
 from .escopelib import espsinks
 from .escopelib import serializer
 
-VERSION = "3.2.0"
+VERSION = "3.3.0"
 
 _PULSECOL=3
 _TRAINCOL=2
@@ -126,8 +126,6 @@ class MainWin(QWidget):
     def makeGraphs(self, k):
         grlay = QHBoxLayout()
         grlay.setContentsMargins(0, 0, 0, 0)
-        #llay = QVBoxLayout()
-        #llay.setContentsMargins(0, 0, 0, 0)
         lbl = QLabel(chr(65+k))
         self.label[k] = lbl
         lbl.setAlignment(Qt.AlignLeft | Qt.AlignTop)
@@ -135,8 +133,6 @@ class MainWin(QWidget):
         f.setWeight(QFont.Bold)
         lbl.setFont(f)
         grlay.addWidget(lbl)
-        #llay.addStretch(1)
-        #grlay.addLayout(llay)
         self.pulsegraph[k] = ESPPulseGraph(self.cfg, k)
         grlay.addWidget(self.pulsegraph[k])
         self.traingraph[k] = ESPTrainGraph(self.cfg, k)
@@ -152,6 +148,8 @@ class MainWin(QWidget):
 
     def makeTrainLayout(self, k):
         trbutlay = QGridLayout()
+        trbutlay.setContentsMargins(0, 0, 0, 0)
+        trbutlay.setSpacing(6)
         def addMonoTrain(varname, lbl, y):
             hl = QLabel(lbl+':')
             trbutlay.addWidget(hl, y, 0)
@@ -191,6 +189,9 @@ class MainWin(QWidget):
 
     def makePulseLayout(self, k):
         pubutlay = QGridLayout()
+        pubutlay.setContentsMargins(0, 0, 0, 0)
+        pubutlay.setSpacing(6)
+        
         def addMonoPulse(varname, lbl, y):
             hl = QLabel(lbl+':',self)
             pubutlay.addWidget(hl,y,0)
@@ -238,9 +239,10 @@ class MainWin(QWidget):
         vlay.addLayout(grlay)
 
         allbutlay = QHBoxLayout()
+        allbutlay.setContentsMargins(18, 0, 18, 0)
+        allbutlay.setSpacing(36)
         pubutlay = self.makePulseLayout(k)
         allbutlay.addLayout(pubutlay)
-        allbutlay.addSpacing(10)
         trbutlay = self.makeTrainLayout(k)
         allbutlay.addLayout(trbutlay)
         vlay.addLayout(allbutlay)
@@ -261,11 +263,13 @@ class MainWin(QWidget):
         butlay = self.makeButtons()
         olay.addLayout(butlay)
         self.olay = olay
+        
         scroll = QScrollArea(self)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn) # for debug
         #scroll.setFrameShape(QFrame.NoFrame)
         self.scroll = scroll
+
         self.canvas = QWidget()
         slay = QVBoxLayout(self.canvas)
         slay.setContentsMargins(9, 0, 9, 0)
@@ -439,15 +443,13 @@ class MainWin(QWidget):
             self.pulseButEnable(k)
             self.newPulse('type.base',k,forcedraw=True) # Force redraw
             #self.rebuildGraphs(k)
-        self.canvas.resize(QSize(self.canvas.width(), self.canvas.sizeHint().height()))
+        self.canvas.resize(QSize(self.canvas.width(),
+                                 self.canvas.sizeHint().height()))
         self.resizeEvent()
 
     def resizeEvent(self, e=None):
         w = self.scroll.viewport().width()
-        #x = self.scroll.x()
-        for f in self.frames:
-            x = f.x()
-            f.resize(w - 2*x, f.height())
+        self.canvas.resize(w, self.canvas.height())
 
     def click_run(self):
         self.startRun()

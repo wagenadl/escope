@@ -2,6 +2,8 @@ import json
 from .Struct import Struct
 from .espconfig import Monovalue, Bivalue, Trivalue, Pulsetype
 import numpy as np
+
+
 class Encoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, Struct):
@@ -20,13 +22,15 @@ class Encoder(json.JSONEncoder):
         elif isinstance(obj, np.ndarray):
             return {"__type__": "array", "shape": list(obj.shape), "data": list(obj.flatten())}
         else:
-            return super().default()
+            return super().default(obj)
 
-def decoder(dct):
+        
+def decode(dct):
     if "__type__" in dct:
         typ = dct["__type__"]
         if typ=="Struct":
-            return Struct(**dct)
+            return Struct(**{k: decode(v) if type(v)==dict else v
+                             for k, v in dct.items()})
         elif typ == "Mono":
             return Monovalue(dct["base"])
         elif typ == "Bi":
@@ -37,11 +41,12 @@ def decoder(dct):
             return Pulsetype(dct["value"])
         elif typ == "array":
             return np.array(dct["data"]).reshape(dct["shape"])
-        else:
-            return dct
+    return dct
 
+        
 def dump(obj, fd):
     json.dump(obj, fd, cls=Encoder, indent=2)
 
+    
 def load(fd):
-    return json.load(fd, object_hook=decoder)
+    return json.load(fd, object_hook=decode)

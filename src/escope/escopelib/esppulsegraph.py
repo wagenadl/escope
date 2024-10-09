@@ -19,15 +19,15 @@ class ESPPulseGraph(ESPGraph):
         (xx, yy) = espconfig.mktrain(self.cfg, self.k)
         rng = np.max(np.abs(yy))*scl
         if rng==0:
-            rng=1.
+            rng = 1.
         while rng>1000:
-            rng/=1000.
-            mul*=1000.
-            scl/=1000.
+            rng /= 1000.
+            mul *= 1000.
+            scl /= 1000.
         while rng<1:
-            rng*=1000.
-            mul/=1000.
-            scl*=1000.
+            rng *= 1000.
+            mul /= 1000.
+            scl *= 1000.
         
         if self.cfg.pulse[self.k].type.value:
             for itr in range(1,int(self.cfg.train[self.k].ntrains.base)):
@@ -45,6 +45,8 @@ class ESPPulseGraph(ESPGraph):
             
             (xx, yy) = espconfig.mkpulse(self.cfg, self.k, 0, 0)
             self.plot(xx*1e3, yy*scl)
+        else:
+            self.plot([-.3, 10.3], [0, 0])
         self.setXLabel('(ms)')
         scl = espconfig.scaleunit(self.cfg.conn.units[self.k], mul)
         self.setYLabel(f'({scl})')

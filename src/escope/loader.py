@@ -67,7 +67,8 @@ def load(fn: str) -> tuple[np.ndarray, dict]:
 
     info = json.loads(_readurl(fn + ".escope"))
     data = _readurl(fn + ".dat", binary=True)
-    config = json.loads(_readurl(fn + ".config"))
+    if "config" not in info:
+        info["config"] = json.loads(_readurl(fn + ".config"))
 
     if info["version"] >= "escope-3.2":
         data = np.frombuffer(data, dtype=np.float32)
@@ -75,7 +76,7 @@ def load(fn: str) -> tuple[np.ndarray, dict]:
         data = np.frombuffer(data)
     
     C = len(info['channels'])
-    if config['trig']['enable'] and config["capt_enable"]:
+    if info['config']['trig']['enable'] and info['config']["capt_enable"]:
         S = info['sweep_scans']
         N = len(data) // S // C
         if len(data) > N*S*C:

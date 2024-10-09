@@ -15,9 +15,13 @@ class ESPTrainGraph(ESPGraph):
         
     def rebuild(self):
         self.cla()
-        mul=1.
+        train = self.cfg.train[self.k]
+        pulse = self.cfg.pulse[self.k]
+
+        mul = 1.
         fs_hz = self.cfg.hw.genrate.value
-        if self.cfg.pulse[self.k].type.value:
+        if pulse.type.value and (train.ntrains.base > 1
+                                 or train.npulses.base > 1):
             scl = self.cfg.conn.scale[self.k]
             (xx, yy) = espconfig.mktrain(self.cfg, self.k)
             rng = np.max(np.abs(yy))*scl
@@ -48,17 +52,25 @@ class ESPTrainGraph(ESPGraph):
                 txpxcolor = t1pxcolor
             self.plot(xx, yy*scl, txpxcolor)
             timing = espconfig.mktiming(self.cfg, self.k)
-            for itr in range(1,int(self.cfg.train[self.k].ntrains.base)):
-                (xx, yy) = espconfig.mkpulse(self.cfg, self.k, itr, 0)
-                self.plot(xx+timing[1][itr,0]/fs_hz, yy*scl, txp1color)
-            for ipu in range(1,int(self.cfg.train[self.k].npulses.base)):
-                (xx, yy) = espconfig.mkpulse(self.cfg, self.k, 0, ipu)
+            for itr in range(1, int(train.ntrains.base)):
+                (xx, yy) = espconfig.mkpulse(self.cfg, self.k, itr, 0,
+                                             margin=False)
+                self.plot(xx + timing[1][itr,0] / fs_hz,
+                          yy * scl, txp1color)
+            for ipu in range(1, int(train.npulses.base)):
+                (xx, yy) = espconfig.mkpulse(self.cfg, self.k, 0, ipu,
+                                             margin=False)
                 self.plot(xx+timing[1][0,ipu]/fs_hz, yy*scl, t1pxcolor)
-            (xx, yy) = espconfig.mkpulse(self.cfg, self.k, 0, 0)
+            (xx, yy) = espconfig.mkpulse(self.cfg, self.k, 0, 0,
+                                         margin=False)
             self.plot(xx+timing[1][0,0]/fs_hz, yy*scl, t1p1color)
                 
-        self.setXLabel('(s)')
-        scl = espconfig.scaleunit(self.cfg.conn.units[self.k], mul)
-        self.setYLabel(f'({scl})')
-        self.autolim()
+            self.setXLabel('(s)')
+            scl = espconfig.scaleunit(self.cfg.conn.units[self.k], mul)
+            self.setYLabel(f'({scl})')
+            self.autolim()
+        else:
+            self.setXLabel('')
+            self.setYLabel('')
+            self.noticks()
             

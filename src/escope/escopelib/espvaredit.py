@@ -41,8 +41,8 @@ class ESPVarEdit(QLineEdit):
         if self.varname[-2:]=='_s':
             return espconfig.unniceunit(txt, 's')
         elif self.varname[-2:]=='_u':
-            return espconfig.unniceunit(txt, self.cfg.conn.units[self.k]) /  \
-                   self.cfg.conn.scale[self.k]
+            v = espconfig.unniceunit(txt, self.cfg.conn.units[self.k])
+            return v / self.cfg.conn.scale[self.k]
         else:
             try:
                 return float(txt)

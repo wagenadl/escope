@@ -26,7 +26,7 @@ class ESTriggerBuffer(ESDataSource):
     def rethresh(self):
         if self.cfg.trig.enable:
             if self.cfg.trig.auto:
-                self.nextautotrig_idx = self.write_idx + self.per_scans + self.cfg.hw.acqrate.value
+                self.nextautotrig_idx = int(self.write_idx + self.per_scans + self.cfg.hw.acqrate.value)
             else:
                 self.nextautotrig_idx = 1000*1000*1000
             self.pretrig_scans = int(self.cfg.trig.delay_div *
@@ -138,7 +138,7 @@ class ESTriggerBuffer(ESDataSource):
             self.trig_idx = self.nextautotrig_idx
             self.read_idx = self.trig_idx - self.pretrig_scans
         self.nexttrigok_idx = self.trig_idx + self.per_scans
-        self.nextautotrig_idx = self.trig_idx + 2*self.per_scans + self.cfg.hw.acqrate.value
+        self.nextautotrig_idx = int(self.trig_idx + 2*self.per_scans + self.cfg.hw.acqrate.value)
         self.trigAvailable.emit()        
 
     def _import_triggered(self):
@@ -202,12 +202,13 @@ class ESTriggerBuffer(ESDataSource):
         
         i0 = self.read_idx % self.buffer.shape[0]
         i1 = (self.read_idx + now) % self.buffer.shape[0]
-        if i1==0:
+        if i1 == 0:
             i1 = self.buffer.shape[0]
-        #print 'i0=',i0, 'i1=',i1, 'now=',now
-        #print 'dst:',dst.shape, 'buf:',self.buffer.shape
-        #print 'readidx=',self.read_idx,'writeidx=',self.write_idx, 'trigidx=',self.trig_idx
-        if i1<=i0:
+        print('i0=', i0, 'i1=', i1, 'now=',now)
+        print('dst:',dst.shape, 'buf:',self.buffer.shape)
+        print('readidx=',self.read_idx,
+              'writeidx=',self.write_idx, 'trigidx=',self.trig_idx)
+        if i1 <= i0:
             # Must do it in two bits
             n0 = self.buffer.shape[0] - i0
             dst[:n0,:] = self.buffer[i0:,:]
