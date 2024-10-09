@@ -29,6 +29,7 @@ release = '3.3.0'
 
 # -- General configuration ---------------------------------------------------
 
+
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
@@ -37,8 +38,6 @@ extensions = [
     'sphinx.ext.doctest',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosectionlabel',
-    'numpy',
-    'numba',
     ## 'sphinx_rtd_theme'
 ]
 

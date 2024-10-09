@@ -11,3 +11,4 @@ build:
 sphinx:
   configuration: docs/source/conf.py
 
+requirements_file: docs/requirements.txt
