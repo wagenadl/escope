@@ -37,6 +37,8 @@ extensions = [
     'sphinx.ext.doctest',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosectionlabel',
+    'numpy',
+    'numba',
     ## 'sphinx_rtd_theme'
 ]
 
