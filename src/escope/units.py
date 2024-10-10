@@ -1,20 +1,19 @@
-#!/usr/bin/python3
-
-#%   UNITS v. 0.10, Copyright (C) 2009, 2020 Daniel Wagenaar. 
-#%   This software comes with ABSOLUTELY NO WARRANTY. See code for details.
+# units.py - This file is part of EScope/ESpark
+# (C) 2024  Daniel A. Wagenaar
 #
-#%   This program is free software; you can redistribute it and/or modify
-#%   it under the terms of the GNU General Public License as published by
-#%   the Free Software Foundation; version 2 of the License.
-#%
-#%   This program is distributed in the hope that it will be useful,
-#%   but WITHOUT ANY WARRANTY; without even the implied warranty of
-#%   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#%   GNU General Public License for more details.
-#%
-#%   You should have received a copy of the GNU General Public License
-#%   along with this program; if not, write to the Free Software
-#%   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+# EScope and ESpark are free software: you can redistribute it
+# and/or modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# EScope and ESpark are distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this software. If not, see <http://www.gnu.org/licenses/>.
+
 
 import re
 import numpy as np

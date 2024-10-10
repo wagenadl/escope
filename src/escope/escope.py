@@ -458,7 +458,29 @@ class MainWin(QWidget):
 
     def click_about(self):
         abt = QMessageBox()
-        abt.setText(f"EScope v. {VERSION}\n(C) Daniel Wagenaar 2010, 2023, 2024")
+        txt = f"""<b>EScope</b> v. {VERSION}<br>
+
+        (C) 2010, 2023, 2024 Daniel A. Wagenaar<br><br>
+
+        <b>EScope</b> is an electronic oscilloscope.  More
+        information, including a user manual, is available at <a
+        href="https://github.com/wagenadl/escope">github</a> and <a
+        href="https://escope.readthedocs.org">readthedocs</a>.<br><br>
+
+        <b>EScope</b> is free software: you can redistribute it and/or
+        modify it under the terms of the GNU General Public License as
+        published by the Free Software Foundation, either version 3 of
+        the License, or (at your option) any later
+        version.<br><br><b>EScope</b> is distributed in the hope
+        that it will be useful, but WITHOUT ANY WARRANTY; without even
+        the implied warranty of MERCHANTABILITY or FITNESS FOR A
+        PARTICULAR PURPOSE. See the GNU General Public License for
+        more details.<br><br>You should have received a copy of the GNU
+        General Public License along with this program. If not, see <a
+        href="http://www.gnu.org/licenses/gpl-3.0.en.html">www.gnu.org/licenses/gpl-3.0.en.html</a>.
+        
+        """
+        abt.setText(txt)
         abt.setWindowTitle("About EScope")
         abt.exec_()
 

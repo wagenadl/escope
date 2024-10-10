@@ -79,7 +79,7 @@ analyze data you acquired on another computer.
 Installation
 ------------
 
-Installation is as easy as
+Installation is as easy as::
 
     pip install escope
     
@@ -89,14 +89,16 @@ Using the software
 Running from the command prompt
 -------------------------------
 
-To run the software, open a terminal and type either::
+.. container:: compound
 
-    escope
+    To run the software, open a terminal and type either::
+    
+        escope
+    
+    or::
+    
+        espark
 
-or::
-
-    espark
- 
 In Windows, after you run the software in this fashion once, you
 should be able to run it from the start menu as well. (If you know of
 a way to make “pip” create a start menu entry, please contact me or

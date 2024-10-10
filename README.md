@@ -80,3 +80,8 @@ showing how to load the data it saves. You can also
 ## Extended documentation
 
 Full documentation is at [readthedocs.io](https://escope.readthedocs.io).
+
+## License
+
+EScope and ESpark are licensed under the GPL license, version 3 or—at your choice—any later version. See [LICENSE](LICENSE) for more information.
+

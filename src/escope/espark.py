@@ -64,6 +64,7 @@ class MainWin(QWidget):
     def makeButtons(self):
         butlay = QHBoxLayout()
         butlay.setContentsMargins(15, 9, 15, 0)
+        butlay.setSpacing(10)
         hw = QPushButton()
         hw.setText("Hardware...")
         hw.clicked.connect(self.click_hardware)
@@ -104,17 +105,19 @@ class MainWin(QWidget):
         abt.setText("About...")
         abt.clicked.connect(self.click_about) 
 
-        butlay.addWidget(hw)
-        butlay.addWidget(cn)
-        butlay.addStretch(1)
-        butlay.addWidget(ld)
-        butlay.addWidget(sv)
-        butlay.addStretch(1)
         butlay.addWidget(ll)
         butlay.addWidget(rn)
-        butlay.addWidget(sp)
+        butlay.addSpacing(10)
         butlay.addWidget(rp)
         butlay.addStretch(1)
+        butlay.addWidget(hw)
+        butlay.addWidget(cn)
+        #butlay.addStretch(1)
+        butlay.addSpacing(20)
+        butlay.addWidget(ld)
+        butlay.addWidget(sv)
+        butlay.addSpacing(20)
+        #butlay.addStretch(1)
         butlay.addWidget(abt)
 
         hei = 22
@@ -507,7 +510,29 @@ class MainWin(QWidget):
 
     def click_about(self):
         abt = QMessageBox()
-        abt.setText(f"ESpark v. {VERSION}\n(C) Daniel Wagenaar 2010, 2023–24")
+        txt = f"""<b>ESpark</b> v. {VERSION}<br>
+
+        (C) 2010, 2023, 2024 Daniel A. Wagenaar<br><br>
+
+        <b>ESpark</b> is an electronic function generator.  More
+        information, including a user manual, is available at <a
+        href="https://github.com/wagenadl/escope">github</a> and <a
+        href="https://escope.readthedocs.org">readthedocs</a>.<br><br>
+
+        <b>ESpark</b> is free software: you can redistribute it and/or
+        modify it under the terms of the GNU General Public License as
+        published by the Free Software Foundation, either version 3 of
+        the License, or (at your option) any later
+        version.<br><br><b>ESpark</b> is distributed in the hope
+        that it will be useful, but WITHOUT ANY WARRANTY; without even
+        the implied warranty of MERCHANTABILITY or FITNESS FOR A
+        PARTICULAR PURPOSE. See the GNU General Public License for
+        more details.<br><br>You should have received a copy of the GNU
+        General Public License along with this program. If not, see <a
+        href="http://www.gnu.org/licenses/gpl-3.0.en.html">www.gnu.org/licenses/gpl-3.0.en.html</a>.
+        
+        """
+        abt.setText(txt)
         abt.setWindowTitle("About ESpark")
         abt.exec_()
 
