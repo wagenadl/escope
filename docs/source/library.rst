@@ -1,4 +1,4 @@
-_library:
+.. _library:
 
 Python library
 ==============
