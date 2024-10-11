@@ -82,15 +82,16 @@ def limpoly2(yy, ymin, ymax):
 
 
 def mkpoly(xx,yy,offset,scale, hp):
-    #print 'mkpoly', offset, scale
     poly = QPolygon(len(xx))
     for k in range(len(xx)):
         poly.setPoint(k, int(xx[k]), int(offset+scale*yy[k]))
     return poly
 
+
 class ESScopeWin(QWidget):
     sweepComplete = pyqtSignal()
     sweepStarted = pyqtSignal()
+    cursorsMoved = pyqtSignal()
     
     def __init__(self,cfg,parent=None):
         """Constructor.
@@ -114,6 +115,21 @@ class ESScopeWin(QWidget):
         self.dispStyle = 0
         # Display styles: 0=dots, 1=lines, 2=true blue
         self.quitting = False
+        self.cursorx0 = None
+        self.cursorx = None
+        self.setMouseTracking(True)
+
+    def mousePressEvent(self, evt):
+        if evt.button()==Qt.LeftButton:
+            self.cursorx0 = evt.pos().x()
+            self.update()
+            self.cursorsMoved.emit()
+
+    def mouseReleaseEvent(self, evt):
+        if evt.button()==Qt.LeftButton:
+            self.cursorx0 = None
+            self.update()
+            self.cursorsMoved.emit()
 
     def setDisplayStyle(self, sty):
         self.dispStyle = sty
@@ -126,115 +142,189 @@ class ESScopeWin(QWidget):
             self.quitting = True
             QApplication.quit()
 
-    def paintEvent(self, evt):
-        p = QPainter(self)
-        pn = p.pen()
+    def leaveEvent(self, evt):
+        self.cursorx0 = None
+        self.cursorx = None
+        self.update()
+        self.cursorsMoved.emit()
 
-        # Draw grid lines
-        pn.setStyle(Qt.DotLine)
-        pn.setColor(QColor("#aaaaaa"))
-        p.setPen(pn)
+    def mouseMoveEvent(self, evt):
+        self.cursorx = evt.pos().x()
+        self.update()
+        self.cursorsMoved.emit()
+
+    def dataAt(self, xdiv):
+        '''Data at a given position in the graph
+        Returns a vector matching the number of channels
+        '''
+        if self.dat is None:
+            return None
+        xlim0 = self.cfg.hori.xlim[0] + 0.
+        xlim1 = self.cfg.hori.xlim[1]
+        dx = xdiv - self.cfg.trig.delay_div 
+        dt_s = self.cfg.hori.s_div * dx
+        pre_s = self.dat_pre_s
+        i_samp = int(self.cfg.hw.acqrate.value * (dt_s + pre_s))
+        T, C = self.dat.shape
+        if i_samp >= 0 and i_samp < T:
+            return self.dat[i_samp]
+        else:
+            return None
+        
+    def cursors(self):
+        '''Horizontal position of cursors
+        Returns a triplet (cx, cx0, trigx) where:
+        cx is the horizontal position of the cursor in divisions from the
+        left, or None if there is no cursor
+        cx0 is the position of the reference cursor
+        trigx is the position of the t=0 line.
+        '''
         x0 = self.cfg.hori.xlim[0]+0.
         x1 = self.cfg.hori.xlim[1]
         y0 = self.cfg.vert.ylim[0]+0.
         y1 = self.cfg.vert.ylim[1]
         wp = self.width()
         hp = self.height()
-        for x in np.arange(x0,x1+1e-10):
-            xp = wp*(x-x0)/(x1-x0)
-            if xp>=wp:
-                xp=wp-1
-            p.drawLine(int(xp), 0, int(xp), int(hp))
-        for y in np.arange(y0,y1+1e-10):
-            yp = hp * (1 - (y-y0)/(y1-y0))
-            if yp>=hp:
-                yp=hp-1
-            p.drawLine(0, int(yp), int(wp), int(yp))
+        def mapxtodiv(x):
+            if x is not None:
+                return x / wp * (x1-x0) + x0
+        cx0 = mapxtodiv(self.cursorx0)
+        cx = mapxtodiv(self.cursorx)
+        trgx = self.cfg.trig.delay_div
+        return cx, cx0, trgx
+
+    def paintEvent(self, evt):
+        p = QPainter(self)
+        self._drawGridLines(p)
+        self._drawTraces(p)
+        self._drawCursors(p)
+
+    def _drawCursors(self, p: QPainter):
+        hp = self.height()
+        if self.cursorx is not None:
+            p.setPen(QPen(QColor(255, 255, 255), 1))
+            p.drawLine(self.cursorx, 0, self.cursorx, hp)
+            if self.cursorx0 is not None:
+                p.drawLine(self.cursorx0, 0, self.cursorx0, hp)
+
+
+    def _drawGridLines(self, p: QPainter):
+        pn = p.pen()
+        pn.setStyle(Qt.DotLine)
+        pn.setColor(QColor("#aaaaaa"))
+        p.setPen(pn)
+        x0 = self.cfg.hori.xlim[0] + 0.
+        x1 = self.cfg.hori.xlim[1]
+        y0 = self.cfg.vert.ylim[0] + 0.
+        y1 = self.cfg.vert.ylim[1]
+        wp = self.width()
+        hp = self.height()
+        
+        for x in np.arange(x0, x1+1e-10):
+            xp = int(wp * (x-x0) / (x1-x0))
+            if xp >= wp:
+                xp = wp - 1
+            p.drawLine(xp, 0, xp, hp)
+        for y in np.arange(y0, y1+1e-10):
+            yp = int(hp * (1 - (y-y0) / (y1-y0)))
+            if yp >= hp:
+                yp = hp - 1
+            p.drawLine(0, yp, wp, yp)
         pn.setStyle(Qt.SolidLine)
         p.setPen(pn)
-        yp = hp * (1 - (0.-y0)/(y1-y0))
-        p.drawLine(0, int(yp), int(wp), int(yp))
+        yp = int(hp * (1 + y0 / (y1 - y0)))
+        p.drawLine(0, yp, wp, yp)
 
+    def _drawTraces(self, p):
         # Draw traces
-        if self.write_idx is not None and self.write_idx>0 and self.dat is not None:
-            nchan = self.dat.shape[1]
-            w = self.width()
-            sweep_s = self.cfg.hori.s_div * (self.cfg.hori.xlim[1] -
-                                             self.cfg.hori.xlim[0])
+        if self.dat is None:
+            return
+        if self.write_idx is None:
+            return
+        if self.write_idx <= 0:
+            return
 
-            # Let's find out where the data should be plotted
-            # We have data starting at self.dat_pre before the trigger marker.
-            # What we want to display is:
-            want_pre_s = self.cfg.hori.s_div * (self.cfg.trig.delay_div -
-                                                self.cfg.hori.xlim[0])
-            # Our data further more extends self.dat_post after the trigger.
-            # What we want to display is:
-            want_post_s = self.cfg.hori.s_div * (self.cfg.hori.xlim[1] -
-                                                 self.cfg.trig.delay_div)
-            if want_pre_s>self.dat_pre_s:
-                # We don't have enough at the beginning.
-                # Some part of the display will be left black.
-                x0 = int(w * (want_pre_s-self.dat_pre_s)/sweep_s)
-                i0 = 0
-            else:
-                x0 = 0
-                i0 = int(self.cfg.hw.acqrate.value *
-                         (self.dat_pre_s - want_pre_s))
-            if want_post_s>self.dat_post_s:
-                # We don't have enough at the end.
-                x1 = int(w*(1-(want_post_s-self.dat_post_s)/sweep_s))
-                i1 = self.dat.shape[0]
-            else:
-                x1 = w
-                i1 = int(self.dat.shape[0] -
-                         self.cfg.hw.acqrate.value *
-                         (self.dat_post_s - want_post_s))
+        xlim0 = self.cfg.hori.xlim[0] + 0.
+        xlim1 = self.cfg.hori.xlim[1]
+        dxlim = xlim1 - xlim0
+        y0 = self.cfg.vert.ylim[0] + 0.
+        y1 = self.cfg.vert.ylim[1]        
+        wp = self.width()
+        hp = self.height()
 
+        nchan = self.dat.shape[1]
+        sweep_s = self.cfg.hori.s_div * (xlim1 - xlim0)
+
+        # Let's find out where the data should be plotted
+        # We have data starting at self.dat_pre before the trigger marker.
+        # What we want to display is:
+        want_pre_s = self.cfg.hori.s_div * (self.cfg.trig.delay_div - xlim0)
+        # Our data further more extends self.dat_post after the trigger.
+        # What we want to display is:
+        want_post_s = self.cfg.hori.s_div * (xlim1 - self.cfg.trig.delay_div)
+        if want_pre_s > self.dat_pre_s:
+            # We don't have enough at the beginning.
+            # Some part of the display will be left black.
+            x0 = int(wp * (want_pre_s - self.dat_pre_s) / sweep_s)
+            i0 = 0
+        else:
+            x0 = 0
+            i0 = int(self.cfg.hw.acqrate.value * (self.dat_pre_s - want_pre_s))
+        if want_post_s > self.dat_post_s:
+            # We don't have enough at the end.
+            x1 = int(wp * (1 - (want_post_s - self.dat_post_s) / sweep_s))
+            i1 = self.dat.shape[0]
+        else:
+            x1 = wp
+            i1 = int(self.dat.shape[0]
+                     - self.cfg.hw.acqrate.value
+                     * (self.dat_post_s - want_post_s))
+
+        if self.dispStyle==2:
+            neededLength = 2*(x1-x0)
+        else:
+            neededLength = (x1-x0)
+        if self.xx is None or (len(self.xx) > 0 and self.xx[0] != x0) \
+               or len(self.xx) != 2*(x1-x0):
+            if self.dispStyle == 2:
+                self.xx = np.hstack((np.arange(x0, x1),
+                                     np.arange(x1 - 1, x0 - 1, -1)))
+            else:
+                self.xx = np.arange(x0, x1)
+        if self.yy is None:
+            self.yy = [None] * nchan
+        for k in range(nchan):
+            if self.yy[k] is None or len(self.yy[k]) != len(self.xx):
+                self.yy[k] = np.zeros(self.xx.shape)
             if self.dispStyle==2:
-                neededLength = 2*(x1-x0)
+                trueblue(self.dat[i0:i1,:], k, nchan, self.yy[k])
             else:
-                neededLength = (x1-x0)
-            if self.xx is None or (len(self.xx)>0 and self.xx[0]!=x0) \
-                   or len(self.xx)!=2*(x1-x0):
-                if self.dispStyle==2:
-                    self.xx = np.hstack((np.arange(x0,x1),
-                                         np.arange(x1-1,x0-1,-1)))
-                else:
-                    self.xx = np.arange(x0,x1)
-            if self.yy is None:
-                self.yy = [None] * nchan
-            for k in range(nchan):
-                if self.yy[k] is None or len(self.yy[k])!=len(self.xx):
-                    self.yy[k] = np.zeros(self.xx.shape)
-                if self.dispStyle==2:
-                    trueblue(self.dat[i0:i1,:], k, nchan, self.yy[k])
-                else:
-                    sample(self.dat[i0:i1,:], k, nchan, self.yy[k])
+                sample(self.dat[i0:i1,:], k, nchan, self.yy[k])
+
         if self.yy is not None:
             for k in range(len(self.yy)):
                 p.setBrush(self.cc[k])
                 p.setPen(self.cc[k])
                 trc = self.traces[k]
-                scl = -hp/self.cfg.vert.unit_div[trc]/(y1-y0)
-                if self.cfg.vert.coupling[trc]==2:
+                scl = -hp / self.cfg.vert.unit_div[trc] / (y1 - y0)
+                if self.cfg.vert.coupling[trc] == 2:
                     v0 = np.mean(self.yy[k])
                 else:
                     v0 = 0
-                off = hp*(y1-self.cfg.vert.offset_div[trc])/(y1-y0) - scl*v0
+                off = hp * (y1 - self.cfg.vert.offset_div[trc]) / (y1 - y0) - scl * v0
                 if self.dispStyle==2:
-                    limpoly2(self.yy[k], (hp-1-off)/scl, -off/scl)
+                    limpoly2(self.yy[k], (hp - 1 - off) / scl, -off / scl)
                 else:
-                    limpoly1(self.yy[k], (hp-1-off)/scl, -off/scl)
+                    limpoly1(self.yy[k], (hp - 1 - off) / scl, -off / scl)
                 poly = mkpoly(self.xx, self.yy[k], off, scl, hp)
                 if self.dispStyle==0:
                     # Dots
                     p.drawPoints(poly)
-                elif self.dispStyle==1:
+                elif self.dispStyle == 1:
                     p.drawPolyline(poly)
                 else:
                     # True blue
                     p.drawPolygon(poly)
-        p.end()
 
     def resizeEvent(self, evt):
         self.yy = None
@@ -287,12 +377,10 @@ class ESScopeWin(QWidget):
         #self.feedData() #?
 
     def sweepIsComplete(self):
-        #print("sweepiscomplete?", self.write_idx, self.dat.shape)
         return self.dat is not None and self.write_idx>=self.dat.shape[0]
 
     def feedData(self):
         #lock = QMutexLocker(self.mutex)
-        #print("feeddata")
         if self.sweepIsComplete():
             self.write_idx = 0
         if self.write_idx == 0:
@@ -302,10 +390,8 @@ class ESScopeWin(QWidget):
                                                      self.cfg.trig.delay_div)
                                                  
         now = self.src.getData(self.dat[self.write_idx:,:])
-        #print("now", now)
         if self.write_idx==0 and now > 0:
             self.sweepStarted.emit()
-        # print 'feeddata: ', self.write_idx, now, self.dat.shape[0]
         self.write_idx += now
         #del lock
         
@@ -335,7 +421,6 @@ if __name__ == '__main__':
         xx = np.random.rand(1000,1)
         ymin = np.zeros(20)
         trueblue(xx, 0, 1, ymin)
-        #print(ymin)
 
     app = QApplication(sys.argv)
     cfg = esconfig.basicconfig()

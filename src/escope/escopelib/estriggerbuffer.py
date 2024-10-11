@@ -83,7 +83,6 @@ class ESTriggerBuffer(ESDataSource):
                                        self.cfg.hori.xlim[0])
         self.per_scans = int(per_s*self.cfg.hw.acqrate.value)
         self.buffer = np.zeros((3*self.per_scans, self.nchan))
-        # print self.buffer.shape, per_s, self.cfg.hw.acqrate.value, self.nchan
         self.write_idx = 0
         self.read_idx = 0
         self.trig_idx = None
@@ -164,7 +163,6 @@ class ESTriggerBuffer(ESDataSource):
         if self.cfg.trig.auto:
             self.nextautotrig_idx = self.trig_idx + 2*self.per_scans + self.cfg.hw.acqrate.value
         #lock = None
-        print("triggered", self.read_idx, self.write_idx)
         self.trigAvailable.emit()
 
         
@@ -221,10 +219,6 @@ class ESTriggerBuffer(ESDataSource):
         i1 = (self.read_idx + now) % self.buffer.shape[0]
         if i1 == 0:
             i1 = self.buffer.shape[0]
-        print('i0=', i0, 'i1=', i1, 'now=',now)
-        print('dst:',dst.shape, 'buf:',self.buffer.shape)
-        print('readidx=',self.read_idx,
-              'writeidx=',self.write_idx, 'trigidx=',self.trig_idx)
         if i1 <= i0:
             # Must do it in two bits
             n0 = self.buffer.shape[0] - i0

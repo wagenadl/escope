@@ -48,35 +48,78 @@ def scale125(uold, du):
     unew = 10**unewdecade * unewminor
     return unew
 
-   
 
-def niceunit(num,uni):
+_prefix = 'pnuµm kMG'
+_prvalue = 10**np.array([-12, -9, -9, -6, -3, 0, 3, 6, 9, np.inf])
+
+def suitableunit(num, uni):
+    """Finds appropriate metric prefix for a number
+
+    SUITABLEUNIT(value, unit) returns a version of UNIT with a
+    suitable prefix for the VALUE.
+
+    For instance, NICEUNIT(0.23, 'mV') returns '230 µV'.
+    """
+
+    if num == 0:
+        return uni
+
+    if len(uni) > 1:
+        if uni[0] in _prefix:
+            num = num * _prvalue[_prefix.index(uni[0])]
+            uni = uni[1:]
+
+    usepfx = ''
+    for pfx, pfval in zip(_prefix, _prvalue):
+        if abs(num) >= pfval:
+            usepfx = pfx
+    return (usepfx + uni).strip()
+    
+
+def asunit(num, uni, newunit):
+    if num == 0:
+        return num
+
+    if len(uni) > 1:
+        if uni[0] in _prefix:
+            num = num * _prvalue[_prefix.index(uni[0])]
+            uni = uni[1:]
+
+    if len(newunit) > 1:
+        if newunit[0] in _prefix:
+            num = num / _prvalue[_prefix.index(newunit[0])]
+            newunit = newunit[1:]
+
+    if newunit != uni:
+        raise ValueError("Mismatched units")
+    return num
+
+def decimalstosuit(num, example, digits=3):
+    trail = int(digits - max(0, np.round(np.log10(example))))
+    if trail <= 0:
+        trail = 0
+    fmt = f"%.{trail}f"
+    return fmt % num
+
+def niceunit(num, uni):
     """Converts a number with a unit to nicer units
 
     str = NICEUNIT(number,unit) attaches the given unit to the number.
-    For instance, NICEUNIT(0.23,'V') returns '230 mV'.
+    For instance, NICEUNIT(0.23, 'V') returns '230 mV'.
     """
-    if num==0:
-        return "0 " + uni
-    
-    sgn=np.sign(num)
-    num=np.abs(num)
-    prf='pnum kMG'
-    prv=10**np.array([-12, -9, -6, -3, 0, 3, 6, 9, np.inf])
-    if len(uni)>1:
-        if uni[0] in prf:
-            num = num * prv[prf.index(uni[0])]
-            uni = uni[1:]
-    for k in range(len(prf),0,-1):
-        if num<prv[k]:
-            if prf[k-1]!=' ':
-                uni1 = prf[k-1] + uni
-            else:
-                uni1 = uni
-            s = "%.5g" % (num/prv[k-1]) + ' ' + uni1
-    if sgn<0:
-        s='-' + s
-    return s
+
+    uni1 = suitableunit(num, uni)
+    num = asunit(num, uni, uni1)
+    s = ("%.5g" % num) + " " + uni1
+    return s.replace("-", "−")
+
+
+def niceunitmatching(num, eg, uni):
+    uni1 = suitableunit(eg, uni)
+    num = asunit(num, uni, uni1)
+    eg = asunit(eg, uni, uni1)
+    s = decimalstosuit(num, eg*10) + " " + uni1
+    return s.replace("-", "−")
 
 
 def findadapters():
