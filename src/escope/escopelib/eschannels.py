@@ -121,7 +121,7 @@ class ESChannels(QWidget):
     def buildUnits(self):
         for k in range(self.cfg.MAXCHANNELS):
             self.h_uni[k].clear()
-            items = 'uV mV V pA nA uA mA'.split(' ')
+            items = 'µV mV V pA nA µA mA'.split(' ')
             for c in items:
                 self.h_uni[k].addItem(c)
             scl = esconfig.niceunit(self.cfg.conn.scale[k],
@@ -130,7 +130,9 @@ class ESChannels(QWidget):
                 self.h_uni[k].setCurrentIndex(items.index(scl[1]))
             else:
                 self.h_uni[k].setCurrentIndex(0)
-                print('Cannot find units item for', scl[1])
+                print('Cannot find units item for', scl[1], len(scl[1]),
+                      self.cfg.conn.scale[k],
+                      self.cfg.conn.units[k])
 
     def selectChannel(self, k, idx):
         was = self.cfg.conn.hw[k]

@@ -21,7 +21,7 @@ from .escopelib.ledlabel import LEDLabel
 from .escopelib import espsinks
 from .escopelib import serializer
 
-VERSION = "3.3.0"
+VERSION = "3.3.2"
 
 _PULSECOL=3
 _TRAINCOL=2
@@ -523,7 +523,9 @@ class MainWin(QWidget):
         modify it under the terms of the GNU General Public License as
         published by the Free Software Foundation, either version 3 of
         the License, or (at your option) any later
-        version.<br><br><b>ESpark</b> is distributed in the hope
+        version.<br><br>
+
+        <b>ESpark</b> is distributed in the hope
         that it will be useful, but WITHOUT ANY WARRANTY; without even
         the implied warranty of MERCHANTABILITY or FITNESS FOR A
         PARTICULAR PURPOSE. See the GNU General Public License for
@@ -585,6 +587,9 @@ class MainWin(QWidget):
 ######################################################################
 def main():
     print(f"This is ESpark {VERSION}")
+    print("(C) 2010–2024 Daniel A. Wagenaar")
+    print("ESpark is free software. Click “About” to learn more.")
+
     os.chdir(os.path.expanduser("~/Documents"))
     if not os.path.exists("EScopeData"):
         os.mkdir("EScopeData")

@@ -152,7 +152,7 @@ def plot(data: np.ndarray, info: dict):
         for c in range(C):
             plt.plot(tt, data[c] * factors[c], color=COLORS[c])
     plt.xlabel('Time (s)')
-    plt.legend([f"{chn} ({uni})" for chn, scl in zip(info['channels'], units)])
+    plt.legend([f"{chn} ({uni})" for chn, uni in zip(info['channels'], units)])
     plt.title(info['rundate'])
 
 

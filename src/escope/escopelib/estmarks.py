@@ -55,27 +55,45 @@ class ESTMarks(QWidget):
         self.tracking = None # None, or one of EST_TIMESCALE, EST_TRIGDELAY
         self.wheeling = None
 
+        self.tcursor = None
+        self.tcursor0 = None
+        self.ttrig = 0
+        self.data = None
+        self.data0 = None
+        self.datacolors = []
+
+    def setCursors(self, tc, tc0, ttrig):
+        self.tcursor = tc
+        self.tcursor0 = tc0
+        self.ttrig = ttrig
+        self.update()
+
+    def setData(self, data, data0=None, cc=None):
+        self.data = data
+        self.data0 = data0
+        self.datacolors = cc
+        self.update()
+
     def paintEvent(self, evt):
         p = QPainter(self)
-        pn = p.pen()
-        f = QFont(*self.cfg.font)
-        #f.setPointSize(7)
-        p.setFont(f)
+        p.setFont(QFont(*self.cfg.font))
         
         hp = self.height()
         wp = self.width() + 0.
         x0 = self.cfg.hori.xlim[0] + 0.
         x1 = self.cfg.hori.xlim[1]
-        self.divp = wp/(x1-x0)
+        self.divp = wp / (x1-x0)
+        self._paintTriggerSymbol(p, x0, x1, wp, hp)
+        self._paintTimeBar(p, x0, x1, wp, hp)
+        self._paintCursors(p, x0, x1, wp, hp)
 
+    def _paintTriggerSymbol(self, p: QPainter, x0: float, x1: float, wp: int, hp: int):
         if self.tracking==EST_TRIGDELAY:
             xp = self.trackx
         else:
-            xp = wp * (self.cfg.trig.delay_div-x0)/(x1-x0)
+            xp = wp * (self.cfg.trig.delay_div - x0) / (x1 - x0)
         sclh = hp/4
-        pn.setWidth(2)
-        pn.setColor(QColor("#dddddd"))
-        p.setPen(pn)
+        p.setPen(QPen(QColor("#dddddd"), 2))
         if self.cfg.trig.enable:
             p.setBrush(QColor("#dddddd"))
         else:
@@ -85,21 +103,53 @@ class ESTMarks(QWidget):
         p.drawLine(int(xp), 0, int(xp), int(hp-sclh*2))
         self.xp_trig = xp
         self.dxp_trig = sclh
-            
-        pn.setColor(QColor("white"))
-        pn.setWidth(4)
-        pn.setCapStyle(Qt.FlatCap)
-        p.setPen(pn)
-        xp = wp * (x1-.5-x0)/(x1-x0)
-        p.drawLine(int(xp+self.divp/2.), 5, int(xp-self.divp/2.), 5)
+
+    def _paintTimeBar(self, p: QPainter, x0: float, x1: float, wp: int, hp: int):
+        p.setPen(QPen(QColor("white"), 4, Qt.SolidLine, Qt.FlatCap))
+        xp = int(wp * (x1 - 0.5 - x0) / (x1-x0))
+        p.drawLine(int(xp + self.divp / 2), 5, int(xp - self.divp / 2), 5)
         self.xp_time = xp
         if self.tracking==EST_TIMESCALE:
             scl = self.scl
         else:
             scl = self.cfg.hori.s_div
-        p.drawText(int(xp)-50, 0, 100, self.height(),
+        p.drawText(xp - 50, 0, 100, self.height(),
                    Qt.AlignHCenter | Qt.AlignBottom,
-                   esconfig.niceunit(scl,'s'))
+                   esconfig.niceunit(scl, 's'))
+
+    def _paintCursors(self, p: QPainter, x0: float, x1: float, wp: int, hp: int):
+        if self.tcursor is None:
+            return
+        p.setPen(QColor("white"))
+        xp = 0 # left of display
+        if self.tcursor0 is None:
+            divs = self.tcursor - self.ttrig
+            lbl = ''
+        else:
+            divs = self.tcursor - self.tcursor0
+            lbl = 'Δ'
+        t = divs * self.cfg.hori.s_div
+        tref = self.cfg.hori.s_div
+        hp = self.height()
+        p.drawText(0, 0, 30, hp, Qt.AlignLeft | Qt.AlignBottom, lbl)
+        p.drawText(0, 0, 130, hp,
+                   Qt.AlignRight | Qt.AlignBottom,
+                   esconfig.niceunitmatching(t, tref, "s"))
+        if self.data is not None:
+            m = 0
+            for k in range(self.cfg.MAXCHANNELS):
+                if  np.isnan(self.cfg.conn.hw[k]):
+                    continue
+                p.setPen(QColor(esconfig.color(self.cfg, k)))
+                y = self.data[m]
+                if self.data0 is not None:
+                    y -= self.data0[m]
+                y = y * self.cfg.conn.scale[k]
+                yref = self.cfg.vert.unit_div[k] * self.cfg.conn.scale[k]
+                p.drawText(120*m, 0, 250, hp,
+                           Qt.AlignRight | Qt.AlignBottom,
+                           esconfig.niceunitmatching(y, yref, self.cfg.conn.units[k]))
+                m += 1
 
     def wheelEvent(self,evt):
         k = self.wheeling
@@ -122,8 +172,6 @@ class ESTMarks(QWidget):
             if scl!=self.cfg.hori.s_div:
                 self.cfg.hori.s_div = scl
                 self.update()
-                #print 'Time scale changed to %s/division' % \
-                #      esconfig.niceunit(scl,'s')
                 self.timeChanged.emit()
         elif k==EST_TRIGDELAY:
             delta = evt.delta()
@@ -136,7 +184,6 @@ class ESTMarks(QWidget):
                 if t!=self.cfg.trig.delay_div:
                     self.cfg.trig.delay_div = t
                     self.update()
-                    print(f'Trigger delay changed to {t:.1f} divisions')
                     self.trigChanged.emit()
 
     def mousePressEvent(self,evt):
@@ -165,7 +212,6 @@ class ESTMarks(QWidget):
         k = self.wheeling
         if k==EST_TRIGDELAY:
             self.cfg.trig.enable = not self.cfg.trig.enable
-            #print self.cfg.trig.enable
             self.trigEnabled.emit()
             self.update()
 
@@ -197,7 +243,6 @@ class ESTMarks(QWidget):
             self.cfg.hori.s_div = self.scl
             self.update()
             if must_emit:
-                #print 'Scale changed to %g s/div' % self.scl
                 self.timeChanged.emit()
         elif k==EST_TRIGDELAY:
             x1p = self.trackxstart + x-self.trackx0
@@ -213,7 +258,6 @@ class ESTMarks(QWidget):
             self.cfg.trig.delay_div = x
             self.update()
             if must_emit:
-                print('Trigger delay changed to {x:.1f} divisions')
                 self.trigChanged.emit()
  
 if __name__ == "__main__":

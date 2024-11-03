@@ -67,6 +67,5 @@ class ESDS_Nidaq(ESDataSource):
         return 0
 
     def getData(self, dst):
-        #print 'esdsnidaq.getdata: dst:',dst.shape
         nsc = self.acqtask.getData(dst)
         return nsc

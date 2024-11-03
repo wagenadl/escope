@@ -22,7 +22,7 @@ from .escopelib.estriggerbuffer import ESTriggerBuffer
 from .escopelib import serializer
 from .escopelib.ledlabel import LEDLabel
 
-VERSION = "3.3.0"
+VERSION = "3.3.2"
 
     
 class MainWin(QWidget):
@@ -198,7 +198,25 @@ class MainWin(QWidget):
         but2lay.setSpacing(10)
         self.apane.sweepStarted.connect(self.sweepStarted)
         self.apane.sweepComplete.connect(self.sweepComplete)
+
+        self.apane.cursorsMoved.connect(self.updateCursors)
+        self.apane.sweepComplete.connect(self.updateDataAt)
+
+    def updateCursors(self):
+        self.bpane.setCursors(*self.apane.cursors())
+        self.updateDataAt()
         
+    def updateDataAt(self):
+        xdiv, xdiv0, xtrig = self.apane.cursors()
+        if xdiv is None:
+            self.bpane.setData(None)
+        else:
+            data = self.apane.dataAt(xdiv)
+            if xdiv0 is None:
+                data0 = None
+            else:
+                data0 = self.apane.dataAt(xdiv0)
+            self.bpane.setData(data, data0)
 
     def click_hardware(self):
         if self.h_hw is None:
@@ -471,7 +489,9 @@ class MainWin(QWidget):
         modify it under the terms of the GNU General Public License as
         published by the Free Software Foundation, either version 3 of
         the License, or (at your option) any later
-        version.<br><br><b>EScope</b> is distributed in the hope
+        version.<br><br>
+
+        <b>EScope</b> is distributed in the hope
         that it will be useful, but WITHOUT ANY WARRANTY; without even
         the implied warranty of MERCHANTABILITY or FITNESS FOR A
         PARTICULAR PURPOSE. See the GNU General Public License for
@@ -492,6 +512,9 @@ class MainWin(QWidget):
 
 def main():
     print(f'This is EScope {VERSION}')
+    print("(C) 2010–2024 Daniel A. Wagenaar")
+    print("EScope is free software. Click “About” to learn more.")
+    
     os.chdir(os.path.expanduser("~/Documents"))
     if not os.path.exists("EScopeData"):
         os.mkdir("EScopeData")
