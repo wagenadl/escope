@@ -62,14 +62,17 @@ class MainWin(QWidget):
 
         hw = QPushButton()
         hw.setText("Hardware...")
+        hw.setToolTip("Configure properties of your DAQ")
         hw.clicked.connect(self.click_hardware)
 
         cn = QPushButton()
         cn.setText("Channels...")
+        tr.setToolTip("Configure which input channels are displayed")
         cn.clicked.connect(self.click_channels)
 
         tr = QPushButton()
         tr.setText("Trigger...")
+        tr.setToolTip("Configure whether sweeps are acquired continuously or upon threshold crossing")
         tr.clicked.connect(self.click_trigger)
 
 
@@ -90,20 +93,24 @@ class MainWin(QWidget):
 
         ca = QCheckBox()
         ca.setText("Capture")
+        ca.setToolTip(f"If enabled, acquired sweeps are automatically saved to “{os.getcwd()}”")
         ca.stateChanged.connect(self.click_capture)
 
         dsp = QComboBox()
         dsp.addItem('Dots')
         dsp.addItem('Lines')
         dsp.addItem('True')
+        dsp.setToolTip("Drawing style for data")
         #dsp.setFixedHeight(20)
         dsp.currentIndexChanged.connect(self.click_display)
         self.displaystyle = dsp
 
         self.hdate = QLabel()
         self.hdate.setText(esconfig.datetimestr())
+        self.hdate.setToolTip("This is the name of your current experiment")
         self.hsweepno = QLabel(self)
         self.hsweepno.setText("#000")
+        self.hsweepno.setToolTip("This is the number of your current sweep")
         self.sweepno = 0
 
         lds = QPushButton()
