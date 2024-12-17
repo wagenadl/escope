@@ -40,7 +40,7 @@ def _readurl(url: str, binary: bool = False) -> Union[str, bytes]:
                 return fd.read()
 
 
-def load(fn: str) -> tuple[np.ndarray, dict]:
+def load(fn: str) -> Tuple[np.ndarray, dict]:
     '''Load a recording from EScope 3.0
 
     Parameters:
