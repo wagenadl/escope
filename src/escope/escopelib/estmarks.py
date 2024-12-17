@@ -131,9 +131,9 @@ class ESTMarks(QWidget):
         t = divs * self.cfg.hori.s_div
         tref = self.cfg.hori.s_div
         hp = self.height()
-        p.drawText(0, 0, 30, hp, Qt.AlignLeft | Qt.AlignBottom, lbl)
+        p.drawText(0, 0, 30, hp, Qt.AlignLeft | Qt.AlignTop, lbl)
         p.drawText(0, 0, 130, hp,
-                   Qt.AlignRight | Qt.AlignBottom,
+                   Qt.AlignRight | Qt.AlignTop,
                    esconfig.niceunitmatching(t, tref, "s"))
         if self.data is not None:
             m = 0
@@ -147,7 +147,7 @@ class ESTMarks(QWidget):
                 y = y * self.cfg.conn.scale[k]
                 yref = self.cfg.vert.unit_div[k] * self.cfg.conn.scale[k]
                 p.drawText(120*m, 0, 250, hp,
-                           Qt.AlignRight | Qt.AlignBottom,
+                           Qt.AlignRight | Qt.AlignTop,
                            esconfig.niceunitmatching(y, yref, self.cfg.conn.units[k]))
                 m += 1
 
