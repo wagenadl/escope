@@ -22,6 +22,7 @@ from PyQt5.QtGui import *
 import sys
 import numpy as np
 from . import esnidaq
+from . import espicodaq
 import time
 
 from .Struct import Struct
@@ -126,7 +127,10 @@ def findadapters():
     lst=[('dummy',)]
     nidevs = esnidaq.deviceList()
     for dev in nidevs:
-        lst.append(('nidaq',dev))
+        lst.append(('nidaq', dev))
+    picodevs = espicodaq.deviceList()
+    for dev in picodevs:
+        lst.append(('picodaq', dev))
     return lst
 
 def reasonable(xmin,xmax):
@@ -149,7 +153,7 @@ def acqrates(ada):
     if typ=='nidaq':
         # Get min and max from hardware?
         pass
-    sr.values = reasonable(sr.min,sr.max)
+    sr.values = reasonable(sr.min, sr.max)
     sr.value = sr.values[int(len(sr.values)/2)]
     return sr
 
@@ -162,6 +166,11 @@ def inputchannels(ada):
     elif typ=='nidaq':
         dev = ada[1]
         chs = esnidaq.devAIChannels(dev)
+    elif typ=='picodaq':
+        dev = ada[1]
+        chs = espicodaq.devAIChannels(dev)
+    else:
+        chs = []
     return chs
 
 def confighardware(cfg):

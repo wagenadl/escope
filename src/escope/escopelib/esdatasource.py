@@ -35,9 +35,9 @@ class ESDataSource(QObject):
     def reconfig(self):
         per_s = self.cfg.hori.s_div * (self.cfg.hori.xlim[1] -
                                        self.cfg.hori.xlim[0])
-        if per_s>=10:
-            per_s /=100
-        elif per_s>=0.1:
+        if per_s >= 10:
+            per_s /= 100
+        elif per_s >= 0.1:
             per_s = 0.1
         self.period_scans = int(per_s * self.cfg.hw.acqrate.value)
         self.period_s = self.period_scans/self.cfg.hw.acqrate.value

@@ -26,6 +26,8 @@ import ctypes
 from .esdatasource import ESDataSource
 from .esdatasource import ESDS_Dummy
 from .esdsnidaq import ESDS_Nidaq
+from .esdspicodaq import ESDS_Picodaq
+
 
 PRIMELIM = 10 # Number of samples of continuously-below-trigger required
 
@@ -75,6 +77,8 @@ class ESTriggerBuffer(ESDataSource):
             self.source = ESDS_Dummy(self.cfg)
         elif typ=='nidaq':
             self.source = ESDS_Nidaq(self.cfg)
+        elif typ=='picodaq':
+            self.source = ESDS_Picodaq(self.cfg)
         else:
             raise AttributeError('Unknown data source type')
         self.source.dataAvailable.connect(self.importData)

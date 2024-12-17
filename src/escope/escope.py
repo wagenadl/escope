@@ -67,7 +67,7 @@ class MainWin(QWidget):
 
         cn = QPushButton()
         cn.setText("Channels...")
-        tr.setToolTip("Configure which input channels are displayed")
+        cn.setToolTip("Configure which input channels are displayed")
         cn.clicked.connect(self.click_channels)
 
         tr = QPushButton()

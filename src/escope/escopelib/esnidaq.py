@@ -30,9 +30,11 @@ try:
     import nidaqmx.stream_writers
     import nidaqmx.constants
     nidaq = True
+    print("got nidaqmx")
 except ImportError:
     nidaq = None
     print("no nidaqmx")
+
         
 #%%
 # Some constants

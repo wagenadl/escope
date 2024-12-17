@@ -26,10 +26,11 @@ from . import esconfig
 import numpy as np
 import ctypes
 from .esdatasource import ESDataSource
-from . import esnidaq
+from . import espicodaq
 
+# This is exactly the same as ESDS_Nidaq, so we should be able to simplify
 
-class ESDS_Nidaq(ESDataSource):
+class ESDS_Picodaq(ESDataSource):
     def __init__(self, cfg):
         super().__init__(cfg)
         self.acqtask = None
@@ -42,7 +43,7 @@ class ESDS_Nidaq(ESDataSource):
             if not np.isnan(hw):
                 ch = self.cfg.hw.channels[int(hw)]
                 chs.append(ch)
-                self.acqtask = esnidaq.ContAcqTask(dev, chs,
+                self.acqtask = espicodaq.ContAcqTask(dev, chs,
                                                    self.cfg.hw.acqrate.value, 
                                                    self.range)
 
