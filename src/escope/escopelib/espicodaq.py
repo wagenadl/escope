@@ -34,7 +34,7 @@ except ImportError:
 
 
 def deviceList():
-    if picodaq is None:
+    if pdaq is None:
         return []   
     devs = []
     for port in picodaq.device.picodaqs():
