@@ -24,11 +24,11 @@ import sys
 from . import espconfig
 import numpy as np
 
-class ESPHardware(QWidget):
+class ESPHardware(QGroupBox):
     cfgChanged = pyqtSignal()
     
     def __init__(self, cfg):
-        QWidget.__init__(self, None)
+        super().__init__(title="Hardware")
         self.setWindowTitle("ESpark: Hardware")
         self.cfg = cfg
         lay = QGridLayout(self)

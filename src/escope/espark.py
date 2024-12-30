@@ -261,7 +261,13 @@ class MainWin(QWidget):
         return frame
         
     def makeContents(self):
-        olay = QVBoxLayout(self)
+        toplay = QHBoxLayout(self)
+        docks = QWidget()
+        docklay = QVBoxLayout(docks)
+        self.makedocks(docklay)
+        toplay.addWidget(docks)
+        olay = QVBoxLayout()
+        toplay.addLayout(olay)
         olay.setContentsMargins(0, 0, 0, 0)
         butlay = self.makeButtons()
         olay.addLayout(butlay)
@@ -401,27 +407,30 @@ class MainWin(QWidget):
     def rebuildGraphs(self, k):
         self.traingraph[k].rebuild()
         self.pulsegraph[k].rebuild()
-    
+
+    def makedocks(self, docklay):
+        self.h_hw = ESPHardware(self.cfg)
+        self.h_hw.cfgChanged.connect(self.hwChanged)
+        docklay.addWidget(self.h_hw)
+        self.h_hw.hide()
+        self.h_chn = ESPChannels(self.cfg)
+        self.h_chn.cfgChanged.connect(self.chnChanged)
+        docklay.addWidget(self.h_chn)
+        self.h_chn.hide()
+        docklay.addStretch(1)
+        
+        
     def click_hardware(self):
-        pass
-        if self.h_hw is None:
-            self.h_hw = ESPHardware(self.cfg)
-            self.h_hw.cfgChanged.connect(self.hwChanged)
         self.h_hw.reconfig()
-        self.h_hw.show()
-        self.h_hw.raise_()
+        self.h_hw.setVisible(not self.h_hw.isVisible())
 
     def hwChanged(self):
         for k in range(self.cfg.MAXCHANNELS):
             self.chnChanged(k)
                         
     def click_channels(self):
-        if self.h_chn is None:
-            self.h_chn = ESPChannels(self.cfg)
-            self.h_chn.cfgChanged.connect(self.chnChanged)
         self.h_chn.reconfig()
-        self.h_chn.show()
-        self.h_chn.raise_()
+        self.h_chn.setVisible(not self.h_chn.isVisible())
 
     def chnChanged(self, k):
         x = self.cfg.conn.hw[k]

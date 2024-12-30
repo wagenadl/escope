@@ -25,11 +25,11 @@ import numpy as np
 from . import espconfig
 
 
-class ESPChannels(QWidget):
+class ESPChannels(QGroupBox):
     cfgChanged = pyqtSignal(int)
     
     def __init__(self, cfg):
-        QWidget.__init__(self, None)
+        super().__init__(title="Channels")
         self.setWindowTitle("ESpark: Channels")
         self.cfg = cfg
         lay = QGridLayout(self)
