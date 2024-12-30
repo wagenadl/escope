@@ -23,6 +23,7 @@ from PyQt5.QtWidgets import *
 import sys
 import numpy as np
 from . import esnidaq
+from . import espicodaq
 import time
 
 from .Struct import Struct
@@ -206,6 +207,9 @@ def findadapters():
     nidevs = esnidaq.deviceList()
     for dev in nidevs:
         lst.append(('nidaq',dev))
+    picodevs = espicodaq.deviceList()
+    for dev in picodevs:
+        lst.append(('picodaq', dev))
     return lst
 
 def reasonable(xmin,xmax):
@@ -245,6 +249,10 @@ def outputchannels(ada):
         dev = ada[1]
         chs = esnidaq.devAOChannels(dev)
         chs += esnidaq.devDOChannels(dev)
+    elif typ=='picodaq':
+        dev = ada[1]
+        chs = espicodaq.devAOChannels(dev)
+        chs = espicodaq.devDOChannels(dev)
     return chs
 
 def confighardware(cfg):
