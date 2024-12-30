@@ -1,4 +1,4 @@
-# espdsnidaq.py - This file is part of EScope/ESpark
+# espdsxxdaq.py - This file is part of EScope/ESpark
 # (C) 2024  Daniel A. Wagenaar
 #
 # EScope and ESpark are free software: you can redistribute it
@@ -15,18 +15,17 @@
 # along with this software. If not, see <http://www.gnu.org/licenses/>.
 
 
-# espdsnidaq - data sink for nidaq
 
 from .espdatasink import ESPDataSink
 import sys
 from . import espconfig
 import numpy as np
 import ctypes
-from . import esnidaq
 
-class ESPDS_Nidaq(ESPDataSink):
+class ESPDS_xxdaq(ESPDataSink):
     def __init__(self, cfg):
-        ESPDataSink.__init__(self, cfg)
+        super().__init__(cfg)
+        self.GenTask = None
         self.gentask = None
 
     def reconfig(self):
@@ -35,22 +34,22 @@ class ESPDS_Nidaq(ESPDataSink):
         chs = []
         for hw in self.chans:
             chs.append(self.cfg.hw.channels[int(hw)])
-        self.gentask = esnidaq.FiniteProdTask(dev, chs,
-                                              self.cfg.hw.genrate.value,
-                                              self.dat)
+        self.gentask = self.GenTask(dev, chs,
+                                    self.cfg.hw.genrate.value,
+                                    self.dat)
 
     def run(self):
         #print 'espds: run'
         if self.gentask is None:
-            raise RuntimeError('ESPDS_Nidaq: Cannot run w/o prior configuration')
+            raise RuntimeError('Cannot run w/o prior configuration')
         self.gentask.setCallback(self.genDone)
         self.gentask.prep()
         self.gentask.run()
-        ESPDataSink.run(self)
+        super().run()
 
     def stop(self):
         #print 'espds: stop'
-        ESPDataSink.stop(self)
+        super().stop()
         self.gentask.stop()
         self.gentask.unprep()
 

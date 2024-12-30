@@ -1,4 +1,4 @@
-# esdspicodaq.py - This file is part of EScope/ESpark
+# espdsnidaq.py - This file is part of EScope/ESpark
 # (C) 2024  Daniel A. Wagenaar
 #
 # EScope and ESpark are free software: you can redistribute it
@@ -14,11 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this software. If not, see <http://www.gnu.org/licenses/>.
 
-from .esdsxxdaq import ESDS_xxdaq
-from . import espicodaq
 
+from .espdsxxdaq import ESPDS_xxdaq
+from . import esnidaq
 
-class ESDS_Picodaq(ESDS_xxdaq):
+class ESPDS_Nidaq(ESPDS_xxdaq):
     def __init__(self, cfg):
         super().__init__(cfg)
-        self.AcqTask = espicodaq.ContAcqTask
+        self.GenTask = esnidaq.FiniteProdTask
+        

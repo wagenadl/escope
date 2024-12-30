@@ -31,6 +31,7 @@ from .esdatasource import ESDataSource
 class ESDS_xxdaq(ESDataSource):
     def __init__(self, cfg):
         super().__init__(cfg)
+        self.AcqTask = None
         self.acqtask = None
         
     def reconfig(self):
