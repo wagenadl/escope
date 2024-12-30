@@ -21,7 +21,7 @@ from .escopelib.ledlabel import LEDLabel
 from .escopelib import espsinks
 from .escopelib import serializer
 
-VERSION = "3.3.2"
+VERSION = "3.4.0"
 
 _PULSECOL=3
 _TRAINCOL=2

@@ -22,7 +22,7 @@ from .escopelib.estriggerbuffer import ESTriggerBuffer
 from .escopelib import serializer
 from .escopelib.ledlabel import LEDLabel
 
-VERSION = "3.3.2"
+VERSION = "3.4.0"
 
     
 class MainWin(QMainWindow):
