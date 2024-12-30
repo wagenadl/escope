@@ -25,7 +25,7 @@ from .escopelib.ledlabel import LEDLabel
 VERSION = "3.3.2"
 
     
-class MainWin(QWidget):
+class MainWin(QMainWindow):
     def __init__(self,cfg):
         QWidget.__init__(self)
         self.cfg = cfg
@@ -44,9 +44,9 @@ class MainWin(QWidget):
 
     def stylize(self):
         self.setFont(QFont(*self.cfg.font))
-        p = self.palette()
+        p = self.scope.palette()
         p.setColor(QPalette.Window,QColor("#000000"))
-        self.setPalette(p)
+        self.scope.setPalette(p)
 
     def place(self):
         scr = QApplication.desktop()
@@ -143,14 +143,19 @@ class MainWin(QWidget):
         but2lay.addWidget(self.hdate)
         but2lay.addWidget(self.hsweepno)
         
-        vlay = QVBoxLayout(self)
+        central = QWidget()
+        self.setCentralWidget(central)
+        mainlay = QHBoxLayout(central)
+        docks = QWidget()
+        docklay = QVBoxLayout(docks)
+        self.docklay = docklay
+        main = QWidget()
+        mainlay.addWidget(docks)
+        mainlay.addWidget(main)
+        vlay = QVBoxLayout(main)
         vlay.addLayout(butlay)
         vlay.addLayout(but2lay)
         
-        for h in [rn, ca]:
-            p=h.palette()
-            p.setColor(QPalette.WindowText,QColor("white"))
-            h.setPalette(p)
         for h in [self.hdate, self.hsweepno]:
             p=h.palette()
             p.setColor(QPalette.WindowText,QColor("gray"))
@@ -158,6 +163,10 @@ class MainWin(QWidget):
         for h in [hw, cn, tr, lds, sas, abt]:
             h.setFocusPolicy(Qt.NoFocus)
 
+        scope = QWidget()
+        self.scope = scope
+        scope.setAutoFillBackground(True)
+        vlay2 = QVBoxLayout(scope)
         axlay = QHBoxLayout()
         
         self.lpane = ESVZeroMarks(self.cfg, self)
@@ -172,7 +181,7 @@ class MainWin(QWidget):
         axlay.addWidget(self.lpane)
         axlay.addWidget(self.apane)
         axlay.addWidget(self.rpane)
-        vlay.addLayout(axlay)
+        vlay2.addLayout(axlay)
         self.rpane.trigChanged.connect(self.trigShifted)
         self.rpane.sclChanged.connect(self.vertChanged)
         self.lpane.cfgChanged.connect(self.vertChanged)
@@ -188,26 +197,33 @@ class MainWin(QWidget):
         dummy = QWidget(self)
         dummy.setFixedSize(RSIZE,BSIZE)
         botlay.addWidget(dummy)
-        vlay.addLayout(botlay)
+        vlay2.addLayout(botlay)
+        vlay.addWidget(scope)
         self.bpane.trigChanged.connect(self.trigShifted)
         self.bpane.trigEnabled.connect(self.trigChanged)
         self.bpane.timeChanged.connect(self.horiChanged)
-        
+
+        docklay.setSpacing(0)
+        docklay.setContentsMargins(2,20,2,0)
+        mainlay.setSpacing(0)
+        mainlay.setContentsMargins(0,0,0,0)
         vlay.setSpacing(0)
+        vlay2.setSpacing(0)
         axlay.setSpacing(0)
         botlay.setSpacing(0)
         vlay.setContentsMargins(0,0,0,2)
+        vlay2.setContentsMargins(0,8,0,2)
         axlay.setContentsMargins(0,0,0,0)
         botlay.setContentsMargins(0,0,0,0)
-        butlay.setContentsMargins(10,10,10,10)
+        butlay.setContentsMargins(8,8,8,8)
         butlay.setSpacing(10)
-        but2lay.setContentsMargins(10,0,10,10)
+        but2lay.setContentsMargins(8,0,8,8)
         but2lay.setSpacing(10)
         self.apane.sweepStarted.connect(self.sweepStarted)
         self.apane.sweepComplete.connect(self.sweepComplete)
-
         self.apane.cursorsMoved.connect(self.updateCursors)
         self.apane.sweepComplete.connect(self.updateDataAt)
+        self.makedocks()
 
     def updateCursors(self):
         self.bpane.setCursors(*self.apane.cursors())
@@ -225,29 +241,33 @@ class MainWin(QWidget):
                 data0 = self.apane.dataAt(xdiv0)
             self.bpane.setData(data, data0)
 
+    def makedocks(self):
+        self.h_hw = ESHardware(self.cfg)
+        self.h_hw.cfgChanged.connect(self.hwChanged)
+        self.docklay.addWidget(self.h_hw)
+        self.h_hw.hide()
+        self.h_chn = ESChannels(self.cfg)
+        self.h_chn.cfgChanged.connect(self.chnChanged)
+        self.docklay.addWidget(self.h_chn)
+        self.h_chn.hide()
+        self.h_trig = ESTrigger(self.cfg)
+        self.h_trig.cfgChanged.connect(self.trigChanged)
+        self.docklay.addWidget(self.h_trig)
+        self.h_trig.hide()
+        self.docklay.addStretch(1)
+        
     def click_hardware(self):
-        if self.h_hw is None:
-            self.h_hw = ESHardware(self.cfg)
-            self.h_hw.cfgChanged.connect(self.hwChanged)
         self.h_hw.reconfig()
-        self.h_hw.show()
-        self.h_hw.raise_()
+        self.h_hw.setVisible(not self.h_hw.isVisible())
             
     def click_channels(self):
-        if self.h_chn is None:
-            self.h_chn = ESChannels(self.cfg)
-            self.h_chn.cfgChanged.connect(self.chnChanged)
         self.h_chn.reconfig()
-        self.h_chn.show()
-        self.h_chn.raise_()
+        self.h_chn.setVisible(not self.h_chn.isVisible())
 
     def click_trigger(self):
-        if self.h_trig is None:
-            self.h_trig = ESTrigger(self.cfg)
-            self.h_trig.cfgChanged.connect(self.trigChanged)
         self.h_trig.reconfig()
-        self.h_trig.show()
-        self.h_trig.raise_()
+        self.h_trig.setVisible(not self.h_trig.isVisible())
+
 
     def click_run(self):
         self.startRun()
@@ -276,14 +296,14 @@ class MainWin(QWidget):
         self.hdate.setText(self.rundate)
         self.hsweepno.setText('#000')
         p=self.hsweepno.palette()
-        p.setColor(QPalette.WindowText,QColor("white"))
+        p.setColor(QPalette.WindowText, QColor("black"))
         self.hsweepno.setPalette(p)
         self.apane.startRun(self.ds)
         if self.cfg.capt_enable:
             self.writeInfoFile()
             self.ds.startCapture(self.rundate)
             p=self.hdate.palette()
-            p.setColor(QPalette.WindowText,QColor("white"))
+            p.setColor(QPalette.WindowText, QColor("black"))
             self.hdate.setPalette(p)
         if self.ds.run():
             print('Running')

@@ -28,11 +28,11 @@ class MyRadio(QRadioButton):
     def hitButton(self, pos):
         return True
 
-class ESTrigger(QWidget):
+class ESTrigger(QGroupBox):
     cfgChanged = pyqtSignal()
     
     def __init__(self, cfg):
-        QWidget.__init__(self, None)
+        super().__init__(title="Trigger")
         self.setWindowTitle("EScope: Trigger")
         self.cfg = cfg
         lay = QVBoxLayout(self)

@@ -25,11 +25,11 @@ import numpy as np
 from . import esconfig
 
 
-class ESChannels(QWidget):
+class ESChannels(QGroupBox):
     cfgChanged = pyqtSignal(int)
     
     def __init__(self, cfg):
-        QWidget.__init__(self, None)
+        super().__init__(title="Channels")
         self.setWindowTitle("EScope: Channels")
         self.cfg = cfg
         lay = QGridLayout(self)

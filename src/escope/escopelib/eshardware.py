@@ -24,11 +24,11 @@ import sys
 from . import esconfig
 import numpy as np
 
-class ESHardware(QWidget):
+class ESHardware(QGroupBox):
     cfgChanged = pyqtSignal()
     
     def __init__(self, cfg):
-        QWidget.__init__(self, None)
+        super().__init__(title="Hardware")
         self.setWindowTitle("EScope: Hardware")
         self.cfg = cfg
         lay = QGridLayout(self)
