@@ -252,7 +252,7 @@ def outputchannels(ada):
     elif typ=='picodaq':
         dev = ada[1]
         chs = espicodaq.devAOChannels(dev)
-        chs = espicodaq.devDOChannels(dev)
+        chs += espicodaq.devDOChannels(dev)
     return chs
 
 def confighardware(cfg):

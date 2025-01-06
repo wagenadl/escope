@@ -36,7 +36,10 @@ class ESPChannels(QGroupBox):
         tlay = QGridLayout(self)
         tlay.setContentsMargins(0,0,0,0)
         tlay.addWidget(wdg)
-        wdg.setStyleSheet("""background-color: #f8f8f8;""")
+        wdg.setStyleSheet("""
+        QWidget { background-color: #f8f8f8; }
+        QComboBox:item:selected { color: black; }
+        """)
         lay = QGridLayout(wdg)
         #lbl = QLabel("Stim", self)
         #lbl.setAlignment(Qt.AlignCenter)
@@ -55,7 +58,7 @@ and graphs.''')
         lbl.setAlignment(Qt.AlignCenter)
         lay.addWidget(lbl,0,2,1,2)
 
-        self.setFont(QFont(*self.cfg.font))
+        #self.setFont(QFont(*self.cfg.font))
 
         self.h_chn = [None] * self.cfg.MAXCHANNELS
         self.h_scl = [None] * self.cfg.MAXCHANNELS

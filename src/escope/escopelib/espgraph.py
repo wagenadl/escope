@@ -15,5 +15,5 @@
 # along with this software. If not, see <http://www.gnu.org/licenses/>.
 
 
-from .espmgraph import ESPGraph
+from .espqgraph import ESPGraph
 

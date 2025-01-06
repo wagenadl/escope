@@ -75,7 +75,7 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     win = QWidget()
     lay = QHBoxLayout(win)
-    fig = MyFig(win)
+    fig = ESPGraph(win)
     lay.addWidget(fig)
     win.show()
     app.exec_()

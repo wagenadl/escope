@@ -56,7 +56,7 @@ class MainWin(QWidget):
         self.olay.update()
 
     def stylize(self):
-        self.setFont(QFont(*self.cfg.font))
+        #self.setFont(QFont(*self.cfg.font))
         self.setStyleSheet("""
         QLineEdit:!enabled { background-color: #f8f8f8; }
         QFrame { background-color: #f8f8f8; }
@@ -463,6 +463,7 @@ class MainWin(QWidget):
     def click_hardware(self):
         self.h_hw.reconfig()
         self.h_hw.setVisible(not self.h_hw.isVisible())
+        QTimer.singleShot(1, lambda: self.resizeEvent())
 
     def hwChanged(self):
         for k in range(self.cfg.MAXCHANNELS):
@@ -471,6 +472,7 @@ class MainWin(QWidget):
     def click_channels(self):
         self.h_chn.reconfig()
         self.h_chn.setVisible(not self.h_chn.isVisible())
+        QTimer.singleShot(1, lambda: self.resizeEvent())
 
     def chnChanged(self, k):
         x = self.cfg.conn.hw[k]
