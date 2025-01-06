@@ -31,7 +31,12 @@ class ESPHardware(QGroupBox):
         super().__init__(title="Hardware")
         self.setWindowTitle("ESpark: Hardware")
         self.cfg = cfg
-        lay = QGridLayout(self)
+        wdg = QWidget()
+        tlay = QGridLayout(self)
+        tlay.setContentsMargins(0,0,0,0)
+        tlay.addWidget(wdg)
+        wdg.setStyleSheet("""background-color: #f8f8f8;""")
+        lay = QGridLayout(wdg)
         lbl = QLabel("Adapter:", self)
         lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         lay.addWidget(lbl,0,0)

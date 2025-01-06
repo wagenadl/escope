@@ -36,7 +36,7 @@ class ESPGraph(FigureCanvas):
         self.setSizePolicy(QSizePolicy.Expanding,
                            QSizePolicy.Fixed)
         self.setMinimumSize(100, 100)
-        fig.set_facecolor('#eeeeee') # The Qt palette doesn't affect the fig.
+        fig.set_facecolor('#f8f8f8') # The Qt palette doesn't affect the fig.
 
     def setXLabel(self, s):
         self.axes.set_xlabel(s)
@@ -66,7 +66,7 @@ class ESPGraph(FigureCanvas):
     def noticks(self):
         self.axes.set_xticks([])
         self.axes.set_yticks([])
-        self.axes.set_facecolor('#eeeeee')
+        self.axes.set_facecolor('#f8f8f8')
         for s in self.axes.spines.values():
             s.set_color('#aaaaaa')
         self.draw()

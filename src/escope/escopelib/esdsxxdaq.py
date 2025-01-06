@@ -42,7 +42,7 @@ class ESDS_xxdaq(ESDataSource):
             if not np.isnan(hw):
                 ch = self.cfg.hw.channels[int(hw)]
                 chs.append(ch)
-                self.acqtask = self.acqTask(dev, chs,
+                self.acqtask = self.AcqTask(dev, chs,
                                             self.cfg.hw.acqrate.value, 
                                             self.range)
 

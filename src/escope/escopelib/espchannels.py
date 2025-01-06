@@ -32,7 +32,12 @@ class ESPChannels(QGroupBox):
         super().__init__(title="Channels")
         self.setWindowTitle("ESpark: Channels")
         self.cfg = cfg
-        lay = QGridLayout(self)
+        wdg = QWidget()
+        tlay = QGridLayout(self)
+        tlay.setContentsMargins(0,0,0,0)
+        tlay.addWidget(wdg)
+        wdg.setStyleSheet("""background-color: #f8f8f8;""")
+        lay = QGridLayout(wdg)
         #lbl = QLabel("Stim", self)
         #lbl.setAlignment(Qt.AlignCenter)
         #lay.addWidget(lbl,0,0)

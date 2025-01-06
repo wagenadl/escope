@@ -37,8 +37,8 @@ class ESPTrainGraph(ESPGraph):
 
         mul = 1.
         fs_hz = self.cfg.hw.genrate.value
-        if pulse.type.value and (train.ntrains.base > 1
-                                 or train.npulses.base > 1):
+        if True: #pulse.type.value and (train.ntrains.base > 1
+            #                     or train.npulses.base > 1):
             scl = self.cfg.conn.scale[self.k]
             (xx, yy) = espconfig.mktrain(self.cfg, self.k)
             rng = np.max(np.abs(yy))*scl

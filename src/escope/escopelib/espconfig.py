@@ -366,7 +366,7 @@ def filltrain(cfg, k, timing, vvv):
 
 def mktrain(cfg, k):
     timing = mktiming(cfg, k)
-    marg = max(timing[0]//20, 2)
+    marg = max(timing[0]//20, 1000)
     ttt = (np.arange(-marg, timing[0]+marg))/cfg.hw.genrate.value
     vvv = np.zeros(ttt.shape)
     filltrain(cfg, k, timing, vvv[marg:])
