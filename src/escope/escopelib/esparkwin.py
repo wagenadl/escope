@@ -10,16 +10,16 @@ import os
 import re
 import pickle
 import numpy as np
-from .escopelib import espconfig
-from .escopelib.esphardware import ESPHardware
-from .escopelib.espchannels import ESPChannels
-from .escopelib.esptraingraph import ESPTrainGraph
-from .escopelib.esppulsegraph import ESPPulseGraph
-from .escopelib.espvaredit import ESPVarEdit
-from .escopelib.esptypebox import ESPTypeBox
-from .escopelib.ledlabel import LEDLabel
-from .escopelib import espsinks
-from .escopelib import serializer
+from . import espconfig
+from .esphardware import ESPHardware
+from .espchannels import ESPChannels
+from .esptraingraph import ESPTrainGraph
+from .esppulsegraph import ESPPulseGraph
+from .espvaredit import ESPVarEdit
+from .esptypebox import ESPTypeBox
+from .ledlabel import LEDLabel
+from . import espsinks
+from . import serializer
 
 VERSION = "3.4.0"
 
@@ -27,9 +27,10 @@ _PULSECOL=3
 _TRAINCOL=2
 
 class MainWin(QWidget):
-    def __init__(self, cfg):
+    def __init__(self, cfg, standalone=True):
         QWidget.__init__(self)
         self.cfg = cfg
+        self.standalone = standalone
         self.ds = None
         self.h_hw = None
         self.h_chn = None
@@ -44,8 +45,11 @@ class MainWin(QWidget):
         self.scroll = None
         self.canvas = None
         self.tid = None
-        
-        self.setWindowTitle('ESpark')
+
+        if self.standalone:
+            self.setWindowTitle("ESpark")
+        else:
+            self.setWindowTitle("Stimuli (EScope)")
         self.place()
         self.makeContents()
         self.stylize()
@@ -53,6 +57,24 @@ class MainWin(QWidget):
 
     def stylize(self):
         self.setFont(QFont(*self.cfg.font))
+        self.setStyleSheet("""
+        QLineEdit:!enabled { background-color: #f8f8f8; }
+        QFrame { background-color: #f8f8f8; }
+        QWidget#canvas { background-color: #eeeeee; }
+        QScrollArea { background-color: #eeeeee; }
+        QScrollBar:vertical { border: 0px solid #888888;
+          background: #eeeeee;
+          width: 15px;
+          margin: 0px 0px 0px 6px;
+        }
+        QScrollBar::sub-line:vertical { height: 0px; }
+        QScrollBar::add-line:vertical { height: 0px; }
+        QScrollBar::handle:vertical {
+          border: 1px solid #888888;
+          margin: 0px 0px 0px 0px;
+          background: #cccccc; }
+        QGroupBox { background-color: #eeeeee; }
+        """)
         
     def place(self):
         scr = QApplication.desktop()
@@ -63,11 +85,13 @@ class MainWin(QWidget):
 
     def makeButtons(self):
         butlay = QHBoxLayout()
-        butlay.setContentsMargins(15, 9, 15, 0)
+        butlay.setContentsMargins(6, 6, 0, 0)
         butlay.setSpacing(10)
-        hw = QPushButton()
-        hw.setText("Hardware...")
-        hw.clicked.connect(self.click_hardware)
+        
+        if self.standalone:
+            hw = QPushButton()
+            hw.setText("Hardware...")
+            hw.clicked.connect(self.click_hardware)
 
         cn = QPushButton()
         cn.setText("Channels...")
@@ -101,24 +125,35 @@ class MainWin(QWidget):
         rp.stateChanged.connect(self.click_rep)
         self.h_rep = rp
 
-        abt = QPushButton()
-        abt.setText("About...")
-        abt.clicked.connect(self.click_about) 
+        if self.standalone:
+            abt = QPushButton()
+            abt.setText("About...")
+            abt.clicked.connect(self.click_about)
 
         butlay.addWidget(ll)
         butlay.addWidget(rn)
         butlay.addSpacing(10)
         butlay.addWidget(rp)
         butlay.addStretch(1)
-        butlay.addWidget(hw)
+        if self.standalone:
+            butlay.addWidget(hw)
         butlay.addWidget(cn)
         #butlay.addStretch(1)
-        butlay.addSpacing(20)
+        fr = QFrame()
+        fr.setFrameShape(QFrame.StyledPanel)
+        fr.setFixedWidth(2)
+        butlay.addWidget(fr)
+        #butlay.addSpacing(20)
         butlay.addWidget(ld)
         butlay.addWidget(sv)
-        butlay.addSpacing(20)
+        #butlay.addSpacing(20)
         #butlay.addStretch(1)
-        butlay.addWidget(abt)
+        if self.standalone:
+            fr = QFrame()
+            fr.setFrameShape(QFrame.StyledPanel)
+            fr.setFixedWidth(2)
+            butlay.addWidget(fr)
+            butlay.addWidget(abt)
 
         hei = 22
         for h in [hw, cn, ld, sv, rn, rp, abt]:
@@ -262,13 +297,16 @@ class MainWin(QWidget):
         
     def makeContents(self):
         toplay = QHBoxLayout(self)
+        toplay.setContentsMargins(0, 4, 10, 10)
         docks = QWidget()
         docklay = QVBoxLayout(docks)
+        docklay.setContentsMargins(4, 20, 0, 0)
         self.makedocks(docklay)
         toplay.addWidget(docks)
         olay = QVBoxLayout()
         toplay.addLayout(olay)
         olay.setContentsMargins(0, 0, 0, 0)
+        olay.setSpacing(10)
         butlay = self.makeButtons()
         olay.addLayout(butlay)
         self.olay = olay
@@ -276,18 +314,20 @@ class MainWin(QWidget):
         scroll = QScrollArea(self)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn) # for debug
-        #scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setFrameShape(QFrame.NoFrame)
         self.scroll = scroll
 
-        self.canvas = QWidget()
+        self.canvas = QWidget(objectName="canvas")
         slay = QVBoxLayout(self.canvas)
-        slay.setContentsMargins(9, 0, 9, 0)
+        slay.setContentsMargins(0,0,0,0) #(9, 6, 9, 6)
+        slay.setSpacing(4)
         
         for k in range(self.cfg.MAXCHANNELS):
             frame = self.makeFrame(k)
             frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             self.frames[k] = frame
             slay.addWidget(frame)
+        slay.addStretch(1)
             
         scroll.setWidget(self.canvas)
         olay.addWidget(scroll)
@@ -593,25 +633,3 @@ class MainWin(QWidget):
         for k in self.cfg.__dict__:
             self.cfg.__dict__[k] = cfg.__dict__[k]
 
-######################################################################
-def main():
-    print(f"This is ESpark {VERSION}")
-    print("(C) 2010–2024 Daniel A. Wagenaar")
-    print("ESpark is free software. Click “About” to learn more.")
-
-    os.chdir(os.path.expanduser("~/Documents"))
-    if not os.path.exists("EScopeData"):
-        os.mkdir("EScopeData")
-    os.chdir("EScopeData")
-    app = QApplication(sys.argv)
-    cfg = espconfig.basicconfig()
-    mw = MainWin(cfg)
-    mw.show()
-    app.processEvents()#QEventLoop.AllEvents, maxtime=1)
-    mw.resize(1400, 900) 
-    app.processEvents()#QEventLoop.AllEvents, maxtime=1)
-    mw.resize(1402, 900)
-    app.exec_()
-    
-if __name__=='__main__':
-    main()
