@@ -35,7 +35,8 @@ class ESPDataSink(QObject):
         self.t_end_s = None
 
     def reconfig(self):
-        self.idx = [k for k, x in enumerate(self.cfg.conn.hw) if x is not None]
+        self.idx = [k for k, x in enumerate(self.cfg.conn.hw)
+                    if x is not None]
         self.nchans = len(self.idx)
         self.chans = [self.cfg.conn.hw[k] for k in self.idx]
         self.nscans = 0
@@ -46,7 +47,8 @@ class ESPDataSink(QObject):
         self.dat = np.zeros((self.nscans+4, self.nchans))
         for k in range(self.nchans):
             timing = espconfig.mktiming(self.cfg,self.idx[k])
-            espconfig.filltrain(self.cfg, self.idx[k], timing, self.dat[:,k])
+            espconfig.filltrain(self.cfg, self.idx[k], timing,
+                                self.dat[:,k])
         self.t_end_s = self.nscans/self.cfg.hw.genrate.value
 
     def run(self):
@@ -64,10 +66,10 @@ class ESPDS_Dummy(ESPDataSink):
         self.timerid = None
 
     def reconfig(self):
-        ESPDataSink.reconfig(self)
+        super().reconfig()
 
     def run(self):
-        ESPDataSink.run(self)
+        super().run()
         if self.timerid is not None:
             self.killTimer(self.timerid)
         self.timerid = self.startTimer(int(self.t_end_s*1000))
@@ -75,7 +77,7 @@ class ESPDS_Dummy(ESPDataSink):
     def stop(self):
         if self.timerid is not None:
             self.killTimer(self.timerid)
-        ESPDataSink.stop(self)
+        super().stop()
 
     def timerEvent(self, evt):
         self.killTimer(self.timerid)
@@ -84,6 +86,7 @@ class ESPDS_Dummy(ESPDataSink):
         print('espdatasink: timerevent: emitting runcomplete')
         self.runComplete.emit()
 
+        
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 

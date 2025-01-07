@@ -27,8 +27,10 @@ _PULSECOL=3
 _TRAINCOL=2
 
 class MainWin(QWidget):
+    channelsChanged = pyqtSignal()
+    
     def __init__(self, cfg, standalone=True):
-        QWidget.__init__(self)
+        super().__init__()
         self.cfg = cfg
         self.standalone = standalone
         self.ds = None
@@ -473,11 +475,13 @@ class MainWin(QWidget):
         
         
     def click_hardware(self):
+        # This can only hapen in standalone
         self.h_hw.reconfig()
         self.h_hw.setVisible(not self.h_hw.isVisible())
         QTimer.singleShot(1, lambda: self.resizeEvent())
 
     def hwChanged(self):
+        # Possibly triggered externally if not standalone
         for k in range(self.cfg.MAXCHANNELS):
             self.chnChanged(k)
                         
@@ -512,6 +516,8 @@ class MainWin(QWidget):
         self.canvas.resize(QSize(self.canvas.width(),
                                  self.canvas.sizeHint().height()))
         self.resizeEvent()
+        if not self.standalone:
+            self.channelsChanged.emit()
 
     def resizeEvent(self, e=None):
         w = self.scroll.viewport().width()

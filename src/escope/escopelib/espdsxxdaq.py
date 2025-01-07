@@ -29,7 +29,7 @@ class ESPDS_xxdaq(ESPDataSink):
         self.gentask = None
 
     def reconfig(self):
-        ESPDataSink.reconfig(self)
+        super().reconfig()
         dev = self.cfg.hw.adapter[1]
         chs = []
         for hw in self.chans:

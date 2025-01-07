@@ -371,6 +371,8 @@ class MainWin(QMainWindow):
 
     def click_stop(self):
         self.stopRunSoon()
+        if self.h_spark:
+            self.h_spark.click_stop()
 
     def click_capture(self, on):
         self.cfg.capt_enable = not not on
@@ -603,10 +605,15 @@ class MainWin(QMainWindow):
     def click_stim(self):
         if self.h_spark is None:
             self.h_spark = esparkwin.MainWin(self.sparkcfg, False)
+            self.h_spark.channelsChanged.connect(self.spark_channel_change)
         if self.h_spark.isVisible():
             self.h_spark.close()
         else:
             self.h_spark.show()
+            
+    def spark_channel_change(self):
+        self.click_stop()
+        # Probably should check if running and restart automatically if so
 
     def propagateconfigtospark(self):
         if self.h_spark:

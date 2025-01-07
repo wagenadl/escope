@@ -25,12 +25,13 @@ import numpy as np
 try:
     import picodaq
     import picodaq.qadc
+    import picodaq.qdac
     pdaq = True
-    print("got picodaq")
+    print("(got picodaq)")
 except ImportError:
     import sys
     pdaq = None
-    print("no picodaq")
+    print("No picodaq library")
 
 
 def deviceList():
@@ -101,7 +102,8 @@ class ContAcqTask:
             if c.startswith("ai"):
                 chans.append(int(c[2:]))
         self.nchans = len(chans)
-        self.th = picodaq.qadc.ADC()
+        print("dev = ", self.dev, "(ignored)")
+        self.th = picodaq.qadc.ADC() # must pick correct dev
         self.th.setAnalogChannels(chans)
         self.th.setRate(self.acqrate_hz*picodaq.units.Hz)
         if self.foo is not None:
@@ -140,3 +142,79 @@ class ContAcqTask:
         n = len(adat)
         dst[:n, :] = adat
         return n
+
+######################################################################
+
+
+class FiniteProdTask:
+    def __init__(self, dev, chans, genrate_hz, data):
+        self.dev = dev
+        self.chans = chans # i.e., names of the channels
+        self.genrate_hz = genrate_hz
+        self.th = None
+        self.foo = None
+        self.prepped = False
+        self.running = False
+
+    def __del__(self):
+        self.stop()
+        self.unprep()
+
+    def setData(self, data):
+        self.unprep()
+        self.data = data
+
+    def setCallback(self, foo):
+        self.unprep()
+        self.foo = foo
+
+    def prep(self):
+        if self.prepped:
+            return
+        if picodaq is None:
+            raise AttributeError('No PicoDAQ library found')
+        print("dev = ", self.dev, "(ignored)")
+        self.th = picodaq.qdac.DAC()
+        for k, ch in enumerate(self.chans):
+            if ch.lower().startswith("ao"):
+                self.th.addAnalogSource(int(ch[2:], self.data[:,k]))
+            elif ch.lower().startswith("do"):
+                self.th.addDigitalSource(int(ch[2:], self.data[:,k]))
+        self.th.setRate(self.genrate_hz * picodaq.units.Hz)
+        self.prepped = True
+
+    def run(self):
+        if not self.prepped:
+            self.prep()
+        if self.running:
+            return
+        self.th.start(self.foo)
+        self.running = True
+     
+    def stop(self):
+        if self.running:
+            self.th.stop()
+            self.running = False
+
+    def isRunning(self):
+        if not self.running:
+            return False
+        if self.th.isfinished():
+            self.running = False
+            self.th.stop()
+            return False
+        return True       
+    
+    def unprep(self):
+        #print 'FiniteProdTask: unprep, nidaq=',nidaq, ' prepped=',self.prepped, ' th=',self.th
+        if self.isRunning():
+            raise AttributeError('Cannot unprepare while running')
+        if self.prepped:
+            self.prepped = False
+            self.th = None
+######################################################################
+if picodaq:
+    if not deviceList():
+        picodaq = None
+        print("No picoDAQ devices")
+                    

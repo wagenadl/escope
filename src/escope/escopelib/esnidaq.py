@@ -30,10 +30,10 @@ try:
     import nidaqmx.stream_writers
     import nidaqmx.constants
     nidaq = True
-    print("got nidaqmx")
+    print("(got nidaqmx)")
 except ImportError:
     nidaq = None
-    print("no nidaqmx")
+    print("No nidaqmx library")
 
         
 #%%
@@ -291,8 +291,10 @@ class FiniteProdTask:
 ######################################################################
 if nidaq:
     try:
-        deviceList()
+        if not deviceList():
+            nidaq = None
+            print("No nidaq devices")
     except nidaqmx.errors.DaqNotFoundError as e:
         nidaq = None
         print(e)
-                    
+        print("No nidaq devices")
