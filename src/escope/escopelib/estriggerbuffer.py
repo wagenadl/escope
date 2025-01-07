@@ -33,9 +33,10 @@ PRIMELIM = 10 # Number of samples of continuously-below-trigger required
 
 class ESTriggerBuffer(ESDataSource):
     trigAvailable = pyqtSignal()
+    deviceError = pyqtSignal(str)
     
     def __init__(self, cfg):
-        ESDataSource.__init__(self, cfg)
+        super().__init__(cfg)
         self.source = None
         self.read_idx = 0
         self.write_idx = 0
@@ -176,7 +177,12 @@ class ESTriggerBuffer(ESDataSource):
         relidx = self.write_idx % self.buffer.shape[0]
         offset = self.write_idx // self.buffer.shape[0]
         offset *= self.buffer.shape[0]
-        nrows = self.source.getData(self.buffer[relidx:,:])
+        try:
+            nrows = self.source.getData(self.buffer[relidx:,:])
+        except RuntimeError as exc:
+            print("estriggerbuffer exception: ", exc)
+            self.deviceError.emit(str(exc))
+            return # we are called from a signal, so what can we do?
         if nrows == 0:
             return
         

@@ -28,7 +28,7 @@ class ESDataSource(QObject):
     dataAvailable = pyqtSignal()
     
     def __init__(self, cfg):
-        QObject.__init__(self)
+        super().__init__()
         self.cfg = cfg
         self.running = False
 

@@ -102,8 +102,7 @@ class ContAcqTask:
             if c.startswith("ai"):
                 chans.append(int(c[2:]))
         self.nchans = len(chans)
-        print("dev = ", self.dev, "(ignored)")
-        self.th = picodaq.qadc.ADC() # must pick correct dev
+        self.th = picodaq.qadc.ADC(self.dev) # must pick correct dev
         self.th.setAnalogChannels(chans)
         self.th.setRate(self.acqrate_hz*picodaq.units.Hz)
         if self.foo is not None:
@@ -173,8 +172,8 @@ class FiniteProdTask:
             return
         if picodaq is None:
             raise AttributeError('No PicoDAQ library found')
-        print("dev = ", self.dev, "(ignored)")
-        self.th = picodaq.qdac.DAC()
+        print("dev = ", self.dev)
+        self.th = picodaq.qdac.DAC(self.dev)
         for k, ch in enumerate(self.chans):
             if ch.lower().startswith("ao"):
                 self.th.addAnalogSource(int(ch[2:], self.data[:,k]))
