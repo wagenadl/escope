@@ -10,19 +10,20 @@ import os
 import re
 import pickle
 import numpy as np
-from .escopelib import esconfig
-from .escopelib.eshardware import ESHardware
-from .escopelib.eschannels import ESChannels
-from .escopelib.estrigger import ESTrigger
-from .escopelib.esvzeromarks import ESVZeroMarks
-from .escopelib.esvscalemarks import ESVScaleMarks
-from .escopelib.estmarks import ESTMarks
-from .escopelib.esscopewin import ESScopeWin
-from .escopelib.estriggerbuffer import ESTriggerBuffer
-from .escopelib import serializer
-from .escopelib.ledlabel import LEDLabel
+from escopelib import esconfig
+from escopelib.eshardware import ESHardware
+from escopelib.eschannels import ESChannels
+from escopelib.estrigger import ESTrigger
+from escopelib.esvzeromarks import ESVZeroMarks
+from escopelib.esvscalemarks import ESVScaleMarks
+from escopelib.estmarks import ESTMarks
+from escopelib.esscopewin import ESScopeWin
+from escopelib.estriggerbuffer import ESTriggerBuffer
+from escopelib import serializer
+from escopelib.ledlabel import LEDLabel
+from escopelib import esparkwin
 
-VERSION = "3.4.0"
+VERSION = "4.0-alpha"
 
 
 def _parsefilename(name):
@@ -72,12 +73,14 @@ def _loaddata(name, esc, cfg, sweepno):
     return dat, sweepno
 
 class MainWin(QMainWindow):
-    def __init__(self,cfg):
+    def __init__(self, cfg, sparkcfg):
         QWidget.__init__(self)
         self.cfg = cfg
+        self.sparkcfg = sparkcfg
         self.h_hw = None
         self.h_chn = None
         self.h_trig = None
+        self.h_spark = None
         self.ds = None
         self.capfh = None
         self.stopRequested = False
@@ -124,21 +127,28 @@ class MainWin(QMainWindow):
 
         tr = QPushButton()
         tr.setText("Trigger...")
-        tr.setToolTip("Configure whether sweeps are acquired continuously or upon threshold crossing")
+        tr.setToolTip("Configure whether sweeps are started continuously or upon threshold crossing")
         tr.clicked.connect(self.click_trigger)
+
+        stm = QPushButton()
+        stm.setText("Stimuli...")
+        stm.setToolTip("Configure stimulation")
+        stm.clicked.connect(self.click_stim)
 
         # Second row of buttons
         ll = LEDLabel()
-        ll.setToolTip("Indicates whether data are currently being acquired")
+        ll.setToolTip("Bright green indicates live display, bright red indicates data are being captured to disk")
         self.h_led = ll
         
         rn = QPushButton()
         rn.setText("Run")
+        rn.setToolTip("Start live update and capture (if enabled)")
         self.h_run = rn
         rn.clicked.connect(self.click_run)
 
         sp = QPushButton()
         sp.setText("Stop")
+        sp.setToolTip("Halt live update and stop capture (if enabled)")
         self.h_stop = sp
         sp.clicked.connect(self.click_stop)
         sp.hide()
@@ -168,11 +178,14 @@ class MainWin(QMainWindow):
         # Right part of first row
         lds = QPushButton()
         lds.setText("Load Sweep...")
+        lds.setToolTip("Reload previously saved data")
         lds.clicked.connect(self.click_loadsweep)
 
         sas = QPushButton()
         sas.setText("Save Sweep")
+        sas.setToolTip("Save currently visible data to disk")
         sas.clicked.connect(self.click_savesweep)
+
         abt = QPushButton()
         abt.setText("About...")
         abt.clicked.connect(self.click_about)
@@ -182,9 +195,15 @@ class MainWin(QMainWindow):
         butlay.addWidget(hw)
         butlay.addWidget(cn)
         butlay.addWidget(tr)
+        butlay.addWidget(stm)
         butlay.addStretch(1)
+        butlay.addSpacing(20)
         butlay.addWidget(lds)
         butlay.addWidget(sas)
+        fr = QFrame()
+        fr.setFrameShape(QFrame.StyledPanel)
+        fr.setFixedWidth(2)
+        butlay.addWidget(fr)
         butlay.addWidget(abt)
 
         # Lay out the second row
@@ -438,6 +457,7 @@ class MainWin(QMainWindow):
         #print 'HARDWARE changed'
         if self.h_chn is not None and self.h_chn.isVisible():
             self.h_chn.reconfig()
+        self.propagateconfigtospark()
         self.restart()
 
     def chnChanged(self):
@@ -580,6 +600,18 @@ class MainWin(QMainWindow):
         abt.setWindowTitle("About EScope")
         abt.exec_()
 
+    def click_stim(self):
+        if self.h_spark is None:
+            self.h_spark = esparkwin.MainWin(self.sparkcfg, False)
+        if self.h_spark.isVisible():
+            self.h_spark.close()
+        else:
+            self.h_spark.show()
+
+    def propagateconfigtospark(self):
+        if self.h_spark:
+            self.h_spark.importhardwaresettings(self.cfg.hw)
+
     def click_display(self, val):
         self.apane.setDisplayStyle(val)
 
@@ -597,8 +629,9 @@ def main():
     os.chdir("EScopeData")
     app = QApplication(sys.argv)
     cfg = esconfig.basicconfig()
+    sparkcfg = esparkwin.espconfig.basicconfig()
 
-    mw = MainWin(cfg)
+    mw = MainWin(cfg, sparkcfg)
 
     mw.displaystyle.setCurrentIndex(2)
     mw.displaystyle.hide() # on modern computer hardware, this control is not needed, and it confuses students

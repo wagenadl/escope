@@ -227,11 +227,9 @@ def reasonable(xmin,xmax):
 def genrates(ada):
     typ = ada[0]
     sr = Struct()
-    sr.min = 50
-    sr.max = 20000
-    if typ=='nidaq':
-        # Get min and max from hardware?
-        pass
+    sr.min = 1000
+    sr.max = 200000
+    # Get min and max from hardware?
     sr.values = reasonable(sr.min, sr.max)
     sr.value = sr.values[np.argmin((sr.values-10000)**2)]
     return sr

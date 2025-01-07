@@ -54,6 +54,8 @@ class MainWin(QWidget):
         self.makeContents()
         self.stylize()
         self.olay.update()
+        QTimer.singleShot(1, lambda: self.resizeEvent())
+
 
     def stylize(self):
         #self.setFont(QFont(*self.cfg.font))
@@ -92,43 +94,53 @@ class MainWin(QWidget):
             hw = QPushButton()
             hw.setText("Hardware...")
             hw.clicked.connect(self.click_hardware)
+        else:
+            hw = None
 
         cn = QPushButton()
         cn.setText("Channels...")
         cn.clicked.connect(self.click_channels)
+        cn.setToolTip("Configure which channels are used for output")
 
         ld = QPushButton()
         ld.setText("Load...")
         ld.clicked.connect(self.click_load)
+        ld.setToolTip("Reload previously saved configuration")
 
         sv = QPushButton()
         sv.setText("Save...")
         sv.clicked.connect(self.click_save)
+        sv.setToolTip("Save current configuration")
 
         ll = LEDLabel()
-        ll.setToolTip("Indicates whether stimuli are currently being sent out")
+        ll.setToolTip("Bright indicates stimuli are currently being sent out")
         self.h_led = ll
         
         rn = QPushButton()
         rn.setText("Run")
         rn.clicked.connect(self.click_run)
+        rn.setToolTip("Start stimulation sequence")
         self.h_run = rn
 
         sp = QPushButton()
         sp.setText("Stop")
         sp.clicked.connect(self.click_stop)
+        sp.setToolTip("Abort stimulation sequence")
         self.h_stop = sp
         sp.hide()
 
         rp = QCheckBox()
         rp.setText("Repeat")
         rp.stateChanged.connect(self.click_rep)
+        rp.setToolTip("If enabled, stimuli are repeated indefinitely")
         self.h_rep = rp
 
         if self.standalone:
             abt = QPushButton()
             abt.setText("About...")
             abt.clicked.connect(self.click_about)
+        else:
+            abt = None
 
         butlay.addWidget(ll)
         butlay.addWidget(rn)
@@ -157,8 +169,8 @@ class MainWin(QWidget):
 
         hei = 22
         for h in [hw, cn, ld, sv, rn, rp, abt]:
-            h.setFocusPolicy(Qt.NoFocus)
-            #h.setFixedHeight(hei)
+            if h:
+                h.setFocusPolicy(Qt.NoFocus)
         return butlay
 
     def makeGraphs(self, k):
@@ -613,7 +625,12 @@ class MainWin(QWidget):
 
         with open(name, "rt") as fd:
             cfg = serializer.load(fd)
-        self.setConfig(cfg)
+        if not self.setConfig(cfg):
+            QMessageBox.warning(self, "EScope",
+                                """Stimulus configuration is not
+                                compatible with current scope
+                                hardware settings""")
+            return 
         for k in range(self.cfg.MAXCHANNELS):
             for a in self.htr[k]:
                 for b in self.htr[k][a]:
@@ -628,10 +645,27 @@ class MainWin(QWidget):
             self.newPulse('amp1_u.base', k, forcedraw=True)
 
     def closeEvent(self,evt):
-        QApplication.quit()
+        if self.standalone:
+            QApplication.quit()
 
 
     def setConfig(self, cfg):
+        if cfg.hw.adapter not in self.cfg.hw.adapters:
+            # Cannot load config for adapter that is not available
+            return False
+        if not self.standalone:
+            if cfg.hw.adapter != self.cfg.hw.adapter:
+                # Cannot unilaterally change adapter
+                return False
+            oldrate = self.cfg.hw.genrate
         for k in self.cfg.__dict__:
             self.cfg.__dict__[k] = cfg.__dict__[k]
+        if not self.standalone:
+            # Simply ignore saved rate, as we are not in control
+            self.cfg.hw.genrate = oldrate
 
+    def importhardwaresettings(self, reccfg):
+        self.cfg.hw.adapter = reccfg.adapter
+        espconfig.confighardware(self.cfg)
+        self.cfg.hw.genrate.value = reccfg.acqrate.value
+        self.hwChanged()

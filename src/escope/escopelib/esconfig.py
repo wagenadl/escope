@@ -148,13 +148,11 @@ def reasonable(xmin,xmax):
 def acqrates(ada):
     typ = ada[0]
     sr = Struct()
-    sr.min = 5000
-    sr.max = 20000
-    if typ=='nidaq':
-        # Get min and max from hardware?
-        pass
+    sr.min = 1000
+    sr.max = 200000
+    # Get min and max from hardware?
     sr.values = reasonable(sr.min, sr.max)
-    sr.value = sr.values[int(len(sr.values)/2)]
+    sr.value = sr.values[np.argmin((sr.values-10000)**2)]
     return sr
 
 def inputchannels(ada):

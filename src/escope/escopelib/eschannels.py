@@ -43,7 +43,7 @@ class ESChannels(QGroupBox):
         lbl.setAlignment(Qt.AlignCenter)
         lay.addWidget(lbl,0,2,1,2)
 
-        self.setFont(QFont(*self.cfg.font))
+        #self.setFont(QFont(*self.cfg.font))
 
         self.h_chn = [None] * self.cfg.MAXCHANNELS
         self.h_scl = [None] * self.cfg.MAXCHANNELS

@@ -74,7 +74,7 @@ class ESTrigger(QGroupBox):
                 return rslot
             h.clicked.connect(mkSlot(ch))
             
-        self.setFont(QFont(*self.cfg.font))
+        #self.setFont(QFont(*self.cfg.font))
         lay.setSpacing(5)
         self.reconfig()
 
