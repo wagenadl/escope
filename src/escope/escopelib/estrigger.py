@@ -42,17 +42,20 @@ class ESTrigger(QGroupBox):
         self.h_auto = QCheckBox(self)
         self.h_auto.setText("Auto")
         lay.addWidget(self.h_auto)
-        def eslot():
+
+        def enable_slot():
             self.cfg.trig.enable = self.h_enable.isChecked()
             #print 'Enabled: ', self.cfg.trig.enable
             self.cfgChanged.emit()
-        self.h_enable.toggled.connect(eslot)
-        def aslot():
+        self.h_enable.toggled.connect(enable_slot)
+        
+        def auto_slot():
             self.cfg.trig.auto = self.h_auto.isChecked()
             #print 'Auto: ', self.cfg.trig.auto
             self.cfgChanged.emit()
-        self.h_auto.toggled.connect(aslot)
-        self.hh=[]
+        self.h_auto.toggled.connect(auto_slot)
+
+        self.hh_chan = []
         for ch in range(self.cfg.MAXCHANNELS):
             h = MyRadio(self)
             h.setText('')
@@ -61,15 +64,16 @@ class ESTrigger(QGroupBox):
             p = h.palette()
             p.setColor(QPalette.Button, esconfig.color(self.cfg, ch))
             h.setPalette(p)
-            self.hh.append(h)
+            self.hh_chan.append(h)
             lay.addWidget(h)
             def mkSlot(ch):
                 def rslot():
-                    self.cfg.trig.source=ch
+                    self.cfg.trig.source = ch
                     #print 'Selected: ', ch
                     self.cfgChanged.emit()
                 return rslot
             h.clicked.connect(mkSlot(ch))
+            
         self.setFont(QFont(*self.cfg.font))
         lay.setSpacing(5)
         self.reconfig()
@@ -77,45 +81,16 @@ class ESTrigger(QGroupBox):
     def reconfig(self):
         self.h_enable.setChecked(self.cfg.trig.enable)
         self.h_auto.setChecked(self.cfg.trig.auto)
-        for ch in range(self.cfg.MAXCHANNELS):
-            self.hh[ch].setChecked(self.cfg.trig.source==ch)
-        
-    def findAdapter(self):
-        k=0
-        for ada in self.cfg.hw.adapters:
-            if self.cfg.hw.adapter==ada:
-                self.h_ada.setCurrentIndex(k)
-            k=k+1
-
-    def findRate(self):
-        k = np.argmin(abs(self.cfg.hw.acqrate.value -
-                             self.cfg.hw.acqrate.values))
-        self.h_rate.setCurrentIndex(k)
-
-    def buildAdapters(self):
-        self.h_ada.clear()
-        for ada in self.cfg.hw.adapters:
-            name = ada[0]
-            if len(ada)>1:
-                name = f"{name}: {ada[1]}"
-            self.h_ada.addItem(name)
-        self.findAdapter()
-
-    def buildRates(self):
-        self.h_rate.clear()
-        for v in self.cfg.hw.acqrate.values:
-            self.h_rate.addItem("%g kHz" % (v/1000))
-        self.findRate()
-
-    def selectTrigger(self, idx):
-        self.cfg.hw.adapter = self.cfg.hw.adapters[idx]
-        esconfig.es_configtrigger(self.cfg)
-        self.buildRates()
-        self.cfgChanged.emit()
-
-    def selectRate(self, idx):
-        self.cfg.hw.acqrate.value = self.cfg.hw.acqrate.values[idx]
-        self.cfgChanged.emit()
+        for k in range(self.cfg.MAXCHANNELS):
+            self.hh_chan[k].setChecked(self.cfg.trig.source == k)
+            vis = self.cfg.conn.hw[k] is not None \
+                and not np.isnan(self.cfg.conn.hw[k])
+            self.hh_chan[k].setVisible(vis)
+            if vis:
+                c = int(self.cfg.conn.hw[k])
+                name = self.cfg.hw.channels[c]
+                self.hh_chan[k].setText(f"({name})")
+       
 
     
 if __name__ == '__main__':

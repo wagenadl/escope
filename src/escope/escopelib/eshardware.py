@@ -47,7 +47,7 @@ class ESHardware(QGroupBox):
         lay.addWidget(self.h_ada,0,1)
         lay.addWidget(self.h_rate,1,1)
         lay.setSpacing(10)
-        self.setFont(QFont(*self.cfg.font))
+        #self.setFont(QFont(*self.cfg.font))
 
         self.buildAdapters()
         self.reconfig()

@@ -24,7 +24,53 @@ from .escopelib.ledlabel import LEDLabel
 
 VERSION = "3.4.0"
 
-    
+
+def _parsefilename(name):
+    m = re.search(r"(\d{8}-\d{6})-(\d{3})\.escope$", name)
+    if m:
+        rundate = m.group(1)
+        sweepno = int(m.group(2))
+    else:
+        sweepno = None
+        m = re.search(r"(\d{8}-\d{6})\.escope$", name)
+        if m:
+            rundate = m.group(1)
+        else:
+            rundate = "???-???"
+    return rundate, sweepno
+
+
+def _loadconfig(name):
+    with open(name, "r") as fd:
+        esc = serializer.load(fd)
+    if "config" in esc:
+        cfg = esc["config"]
+    else:
+        with open(name[:-7] + ".config") as fd:
+            cfg = serializer.load(fd)
+    return esc, cfg
+
+def _loaddata(name, esc, cfg, sweepno):
+    nch = len(esc["channels"])
+    with open(name[:-7] + ".dat", "rb") as f:
+        nscans = int(cfg.hw.acqrate.value *
+                     cfg.hori.s_div * 
+                     (cfg.hori.xlim[1] - cfg.hori.xlim[0]))
+        nfloats = nscans * nch
+        if esc["version"] >= "escope-3.2":
+            typ = np.float32
+            siz = 4
+        else:
+            typ = np.float64
+            siz = 8
+            f.seek(-nfloats*siz, os.SEEK_END)
+        dat = np.fromfile(f, dtype=typ, count=nfloats)
+        nend = f.tell()
+        if sweepno is None:
+            sweepno = nend // nfloats // siz
+    dat = dat.reshape(len(dat) // nch, nch)
+    return dat, sweepno
+
 class MainWin(QMainWindow):
     def __init__(self,cfg):
         QWidget.__init__(self)
@@ -39,14 +85,14 @@ class MainWin(QMainWindow):
         self.saveSweepRequested = False
         self.setWindowTitle('EScope')
         self.place()
-        self.makeContents()
         self.stylize()
+        self.makeContents()
 
     def stylize(self):
         self.setFont(QFont(*self.cfg.font))
-        p = self.scope.palette()
-        p.setColor(QPalette.Window,QColor("#000000"))
-        self.scope.setPalette(p)
+        self.setStyleSheet("""
+        QWidget#scope { background: black; }
+        """)
 
     def place(self):
         scr = QApplication.desktop()
@@ -60,6 +106,12 @@ class MainWin(QMainWindow):
         RSIZE = 110
         BSIZE = 35
 
+        wdg = QLabel("500 mV", self)
+        RSIZE = max(wdg.sizeHint().width() + 4, 50)
+        wdg.setParent(None)
+        del wdg
+
+        # First row of buttons
         hw = QPushButton()
         hw.setText("Hardware...")
         hw.setToolTip("Configure properties of your DAQ")
@@ -75,7 +127,7 @@ class MainWin(QMainWindow):
         tr.setToolTip("Configure whether sweeps are acquired continuously or upon threshold crossing")
         tr.clicked.connect(self.click_trigger)
 
-
+        # Second row of buttons
         ll = LEDLabel()
         ll.setToolTip("Indicates whether data are currently being acquired")
         self.h_led = ll
@@ -113,6 +165,7 @@ class MainWin(QMainWindow):
         self.hsweepno.setToolTip("This is the number of your current sweep")
         self.sweepno = 0
 
+        # Right part of first row
         lds = QPushButton()
         lds.setText("Load Sweep...")
         lds.clicked.connect(self.click_loadsweep)
@@ -124,6 +177,7 @@ class MainWin(QMainWindow):
         abt.setText("About...")
         abt.clicked.connect(self.click_about)
 
+        # Lay out the first row
         butlay = QHBoxLayout()
         butlay.addWidget(hw)
         butlay.addWidget(cn)
@@ -132,7 +186,8 @@ class MainWin(QMainWindow):
         butlay.addWidget(lds)
         butlay.addWidget(sas)
         butlay.addWidget(abt)
-        
+
+        # Lay out the second row
         but2lay = QHBoxLayout()
         but2lay.addWidget(ll)
         but2lay.addWidget(rn)
@@ -142,7 +197,28 @@ class MainWin(QMainWindow):
         but2lay.addStretch(1)
         but2lay.addWidget(self.hdate)
         but2lay.addWidget(self.hsweepno)
+
+        # Set up overall layout
+        """Although we are a QMainWindow, we don't use Qt's toolbar
+        and dockingarea system. Our overall organization is:
         
+        self
+          - central: mainlay
+              - docks: docklay
+                  - hardware
+                  - channels
+                  - trigger
+               - main: vlay
+                   - butlay (top row of buttons)
+                   - but2lay (second row of buttons)
+                   - scope: vlay2
+                       - axlay
+                           - lpane (ESVZeroMarks)
+                           - apane (ESScopeWin)
+                           - rpane (ESVScaleMarks)
+                       - botlay
+                           - bpane (ESTMarks)
+        """
         central = QWidget()
         self.setCentralWidget(central)
         mainlay = QHBoxLayout(central)
@@ -164,6 +240,7 @@ class MainWin(QMainWindow):
             h.setFocusPolicy(Qt.NoFocus)
 
         scope = QWidget()
+        scope.setObjectName("scope")
         self.scope = scope
         scope.setAutoFillBackground(True)
         vlay2 = QVBoxLayout(scope)
@@ -188,14 +265,15 @@ class MainWin(QMainWindow):
 
         botlay = QHBoxLayout()
         dummy = QWidget(self)
-        dummy.setFixedSize(LSIZE,BSIZE)
+        dummy.setFixedSize(LSIZE, BSIZE)
         botlay.addWidget(dummy)
         self.bpane = ESTMarks(self.cfg, self)
         self.bpane.setMinimumSize(50, BSIZE)
-        self.bpane.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+        self.bpane.setSizePolicy(QSizePolicy.MinimumExpanding,
+                                 QSizePolicy.Fixed)
         botlay.addWidget(self.bpane)
         dummy = QWidget(self)
-        dummy.setFixedSize(RSIZE,BSIZE)
+        dummy.setFixedSize(RSIZE, BSIZE)
         botlay.addWidget(dummy)
         vlay2.addLayout(botlay)
         vlay.addWidget(scope)
@@ -203,21 +281,21 @@ class MainWin(QMainWindow):
         self.bpane.trigEnabled.connect(self.trigChanged)
         self.bpane.timeChanged.connect(self.horiChanged)
 
-        docklay.setSpacing(0)
-        docklay.setContentsMargins(2,20,2,0)
+        docklay.setSpacing(4)
+        docklay.setContentsMargins(4,20,4,6)
         mainlay.setSpacing(0)
         mainlay.setContentsMargins(0,0,0,0)
         vlay.setSpacing(0)
         vlay2.setSpacing(0)
         axlay.setSpacing(0)
         botlay.setSpacing(0)
-        vlay.setContentsMargins(0,0,0,2)
-        vlay2.setContentsMargins(0,8,0,2)
+        vlay.setContentsMargins(0,0,8,8)
+        vlay2.setContentsMargins(0,8,2,3)
         axlay.setContentsMargins(0,0,0,0)
         botlay.setContentsMargins(0,0,0,0)
-        butlay.setContentsMargins(8,8,8,8)
+        butlay.setContentsMargins(8,8,0,8)
         butlay.setSpacing(10)
-        but2lay.setContentsMargins(8,0,8,8)
+        but2lay.setContentsMargins(8,0,0,8)
         but2lay.setSpacing(10)
         self.apane.sweepStarted.connect(self.sweepStarted)
         self.apane.sweepComplete.connect(self.sweepComplete)
@@ -364,6 +442,8 @@ class MainWin(QMainWindow):
 
     def chnChanged(self):
         #print 'CHANNELS changed'
+        if self.h_trig is not None and self.h_trig.isVisible():
+            self.h_trig.reconfig()
         self.restart()
 
     def trigChanged(self):
@@ -428,72 +508,41 @@ class MainWin(QMainWindow):
         self.writeInfoFile(name)
 
     def click_loadsweep(self):
-        # dlg = QFileDialog()
-        # dlg.setFileMode(QfileDialog.ExistingFile)
-        # dlg.setNameFilter()
+        wasRunning = self.ds is not None
+        if wasRunning:
+            self.stopRun()
+
         name, _ = QFileDialog.getOpenFileName(self,
-                                           "Load Sweep",
-                                           os.getcwd(),
-                                           "EScope files (*.escope)")
-        if name:
-            m = re.search(r"(\d{8}-\d{6})-(\d{3})\.escope$", name)
-            if m:
-                rundate = m.group(1)
-                sweepno = int(m.group(2))
-            else:
-                sweepno = None
-                m = re.search(r"(\d{8}-\d{6})\.escope$", name)
-                if m:
-                    rundate = m.group(1)
-                else:
-                    rundate = "???-???"
-                    
-            wasRunning = self.ds is not None
-            if wasRunning:
-                self.stopRun()
-                
-            with open(name, "r") as fd:
-                esc = serializer.load(fd)
-            if "config" in esc:
-                cfg = esc["config"]
-            else:
-                with open(name[:-7] + ".config") as fd:
-                    cfg = serializer.load(fd)
-            nch = len(esc["channels"])
-            with open(name[:-7] + ".dat", "rb") as f:
-                nscans = int(cfg.hw.acqrate.value *
-                             cfg.hori.s_div * 
-                             (cfg.hori.xlim[1] - cfg.hori.xlim[0]))
-                nfloats = nscans * nch
-                if esc["version"] >= "escope-3.2":
-                    typ = np.float32
-                    siz = 4
-                else:
-                    typ = np.float64
-                    siz = 8
-                    f.seek(-nfloats*siz, os.SEEK_END)
-                dat = np.fromfile(f, dtype=typ, count=nfloats)
-                nend = f.tell()
-                if sweepno is None:
-                    sweepno = nend // nfloats // siz
-            dat = dat.reshape(len(dat) // nch, nch)
-            self.cfg.hw = cfg.hw
-            self.cfg.conn = cfg.conn
-            self.cfg.trig = cfg.trig
-            self.cfg.vert = cfg.vert
-            self.cfg.hori = cfg.hori
-            if self.h_hw is not None and self.h_hw.isVisible():
-                self.h_hw.reconfig()
-            if self.h_chn is not None and self.h_chn.isVisible():
-                self.h_chn.reconfig()
-            if self.h_trig is not None and self.h_trig.isVisible():
-                self.h_trig.reconfig()
-            self.apane.forceFeed(dat)
-            self.update()
-            self.rundate = rundate
-            self.hdate.setText(self.rundate)
-            self.sweepno = sweepno
-            self.hsweepno.setText('#%03i' % self.sweepno)
+                                              "Load Sweep",
+                                              os.getcwd(),
+                                              "EScope files (*.escope)")
+        if not name:
+            return
+
+        rundate, sweepno = _parsefilename(name)
+        esc, cfg = _loadconfig(name)
+        dat, sweepno = _loaddata(name, esc, cfg, sweepno)
+
+        self._updatetoloadedsweep(cfg, rundate, sweepno)
+
+    def _updatetoloadedsweep(self, cgf, rundate, sweepno):
+        self.cfg.hw = cfg.hw
+        self.cfg.conn = cfg.conn
+        self.cfg.trig = cfg.trig
+        self.cfg.vert = cfg.vert
+        self.cfg.hori = cfg.hori
+        if self.h_hw is not None and self.h_hw.isVisible():
+            self.h_hw.reconfig()
+        if self.h_chn is not None and self.h_chn.isVisible():
+            self.h_chn.reconfig()
+        if self.h_trig is not None and self.h_trig.isVisible():
+            self.h_trig.reconfig()
+        self.apane.forceFeed(dat)
+        self.rundate = rundate
+        self.hdate.setText(self.rundate)
+        self.sweepno = sweepno
+        self.hsweepno.setText('#%03i' % self.sweepno)
+        self.update()
 
     def click_savesweep(self):
         print("clicksave", self.ds)
@@ -505,7 +554,7 @@ class MainWin(QMainWindow):
         abt = QMessageBox()
         txt = f"""<b>EScope</b> v. {VERSION}<br>
 
-        (C) 2010, 2023, 2024 Daniel A. Wagenaar<br><br>
+        (C) 2010, 2023–2025 Daniel A. Wagenaar<br><br>
 
         <b>EScope</b> is an electronic oscilloscope.  More
         information, including a user manual, is available at <a
@@ -539,7 +588,7 @@ class MainWin(QMainWindow):
 
 def main():
     print(f'This is EScope {VERSION}')
-    print("(C) 2010–2024 Daniel A. Wagenaar")
+    print("(C) 2010, 2023–2025 Daniel A. Wagenaar")
     print("EScope is free software. Click “About” to learn more.")
     
     os.chdir(os.path.expanduser("~/Documents"))
@@ -552,7 +601,7 @@ def main():
     mw = MainWin(cfg)
 
     mw.displaystyle.setCurrentIndex(2)
-    mw.displaystyle.hide() # on modern computer hardware, this control is not needed
+    mw.displaystyle.hide() # on modern computer hardware, this control is not needed, and it confuses students
     mw.show()
     app.exec_()
     

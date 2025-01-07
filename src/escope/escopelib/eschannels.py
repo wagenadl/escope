@@ -136,14 +136,15 @@ class ESChannels(QGroupBox):
 
     def selectChannel(self, k, idx):
         was = self.cfg.conn.hw[k]
-        if idx==len(self.cfg.hw.channels):
+        if idx == len(self.cfg.hw.channels):
             self.cfg.conn.hw[k] = np.nan
         else:
             if idx in self.cfg.conn.hw:
-                ak=np.nonzero(self.cfg.conn.hw==idx)[0][0]
-                if ak!=k:
+                ak = np.nonzero(self.cfg.conn.hw==idx)[0][0]
+                if ak != k:
                     self.cfg.conn.hw[ak] = np.nan
-                    self.h_chn[ak].setCurrentIndex(len(self.cfg.hw.channels))
+                    N = len(self.cfg.hw.channels)
+                    self.h_chn[ak].setCurrentIndex(N)
                     self.cfgChanged.emit(ak)
             self.cfg.conn.hw[k] = idx
         if self.cfg.conn.hw[k]!=was:
