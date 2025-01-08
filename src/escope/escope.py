@@ -385,7 +385,7 @@ class MainWin(QMainWindow):
     def deviceerror(self, msg):
         self.click_stop()
         QMessageBox.warning(self, "EScope",
-                            f"Device error: {msg}. Acquisition stopped.");
+                            "Device error: {msg}. Acquisition stopped.");
 
     def startRun(self):
         self.h_run.hide()
@@ -395,7 +395,10 @@ class MainWin(QMainWindow):
         self.inSweep = False
         self.ds = ESTriggerBuffer(self.cfg)
         self.ds.deviceError.connect(self.deviceerror)
-        self.ds.reconfig()
+        if self.h_spark:
+            self.ds.reconfig(self.h_spark.cfg)
+        else:
+            self.ds.reconfig()
         self.sweepno = 0
         self.rundate = esconfig.datetimestr()
         self.hdate.setText(self.rundate)

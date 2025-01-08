@@ -71,15 +71,15 @@ class ESTriggerBuffer(ESDataSource):
                                 self.cfg.hw.acqrate.value*0.2)
         
 
-    def reconfig(self):
-        ESDataSource.reconfig(self)
+    def reconfig(self, stimcfg=None):
+        super().reconfig()
         typ = self.cfg.hw.adapter[0]
         if typ=='dummy':
             self.source = ESDS_Dummy(self.cfg)
         elif typ=='nidaq':
             self.source = ESDS_Nidaq(self.cfg)
         elif typ=='picodaq':
-            self.source = ESDS_Picodaq(self.cfg)
+            self.source = ESDS_Picodaq(self.cfg, stimcfg)
         else:
             raise AttributeError('Unknown data source type')
         self.source.dataAvailable.connect(self.importData)

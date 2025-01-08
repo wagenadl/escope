@@ -214,6 +214,6 @@ class FiniteProdTask:
 ######################################################################
 if picodaq:
     if not deviceList():
-        picodaq = None
+        pdaq = None
         print("No picoDAQ devices")
                     
