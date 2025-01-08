@@ -20,6 +20,18 @@ Wrapper for picoDAQ functions
 """
 
 import numpy as np
+from numpy.typing import ArrayLike
+
+class MutexHeld:
+    def __init__(self, mutex):
+        self.mutex = mutex
+
+    def __enter__(self):
+        self.mutex.lock()
+        return self
+
+    def __exit__(self, *args):
+        self.mutex.unlock() # even in case of exception
 
 
 try:
@@ -82,10 +94,16 @@ class ContAcqTask:
         self.prepped = False
         self.running = False
         self.rdr = None
+        self.stimcfg = None
+        self.stimdata = {} # keys are "ao0", "do2", etc.
+        self.mutex = QMutex()
 
     def __del__(self):
         self.stop()
         self.unprep()
+
+    def setstimconfig(self, stimcfg):
+        self.stimcfg = stimcfg
 
     def setCallback(self, foo, nscans):
         self.unprep()
@@ -107,7 +125,48 @@ class ContAcqTask:
         self.th.setRate(self.acqrate_hz*picodaq.units.Hz)
         if self.foo is not None:
             self.th.setEvery(self.nscans, self.foo)
+        self.prepstim()
         self.prepped = True
+
+    def prepstim(self):
+        self.stimdata = {}
+        if not self.stimcfg:
+            return
+        print(self.stimcfg)
+        for c in self.stimcfg.conn.hw:
+            if c is not None:
+                chn = self.stimcfg.hw.channels[c]
+                if chn.startswith("ao"):
+                    self.stimdata[chn] = []
+                    self.th.addAnalogSource(chn, lambda: self.gentask(chn, np.float32))
+                elif chn.startswith("do"):
+                    self.th.addDigitalSource(chn, lambda: self.gentask(chn, np.uint8))
+                else:
+                    raise RuntimeError("Unsupported channel name")
+
+    def feedstimdata(self, chn: str, data: ArrayLike, replace=False):
+        # To drop data, set data = None and replace = True
+        with MutexHeld(self.mutex):
+            if replace:
+                self.stimdata[chn] = []
+            if data is not None:
+                self.stimdata[chn].append(data)
+
+    def gentask(self, chn: str, dtype):
+        MAX = 1000 # Feed in small chunks, so canceling is possible
+        res = None
+        # Use the mutex because this is called from qadc thread
+        # Even with the GIL, we still need this to be atomic
+        with MutexHeld(self.mutex):
+            if len(self.stimdata[chn]):
+                if len(self.stimdata[chn][0]) > MAX:
+                    res = self.stimdata[chn][0][:MAX]
+                    self.stimdata[chn][0] = self.stimdata[chn][0][MAX:]
+                else:
+                    res = self.stimdata[chn].pop(0)
+        if res is None:
+            res = np.zeros(MAX, dtype)
+
             
     def run(self):
         if not self.prepped:

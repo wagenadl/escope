@@ -19,6 +19,11 @@ from . import espicodaq
 
 
 class ESDS_Picodaq(ESDS_xxdaq):
-    def __init__(self, cfg):
+    def __init__(self, cfg, stimcfg):
         super().__init__(cfg)
+        self.stimcfg = stimcfg
         self.AcqTask = espicodaq.ContAcqTask
+
+    def reconfig(self):
+        super().reconfig()
+        self.acqtask.setstimconfig(self.stimcfg)

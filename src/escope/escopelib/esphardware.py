@@ -32,10 +32,13 @@ class ESPHardware(QGroupBox):
         self.setWindowTitle("ESpark: Hardware")
         self.cfg = cfg
         wdg = QWidget()
+        wdg.setObjectName("hwdock")
         tlay = QGridLayout(self)
         tlay.setContentsMargins(0,0,0,0)
         tlay.addWidget(wdg)
-        wdg.setStyleSheet("""background-color: #f8f8f8;""")
+        wdg.setStyleSheet("""
+        QWidget#hwdock {background-color: #f8f8f8;}
+        """)
         lay = QGridLayout(wdg)
         lbl = QLabel("Adapter:", self)
         lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
@@ -52,12 +55,13 @@ class ESPHardware(QGroupBox):
         lay.addWidget(self.h_ada,0,1)
         lay.addWidget(self.h_rate,1,1)
         lay.setSpacing(10)
-        #self.setFont(QFont(*self.cfg.font))
 
+        self.reccfg = None
         self.buildAdapters()
         self.reconfig()
 
-    def reconfig(self):
+    def reconfig(self, reccfg=None):
+        self.reccfg = reccfg
         self.findAdapter()
         self.buildRates()
 
@@ -84,8 +88,14 @@ class ESPHardware(QGroupBox):
 
     def buildRates(self):
         self.h_rate.clear()
-        for v in self.cfg.hw.genrate.values:
-            self.h_rate.addItem("%g kHz" % (v/1000))
+        if self.reccfg and self.reccfg.hw.adapter == self.cfg.hw.adapter \
+               and self.cfg.hw.adapter[0] == 'picodaq':
+            self.h_rate.addItem("%g kHz" % (self.reccfg.hw.acqrate.value/1000))
+            self.h_rate.setEnabled(False)
+        else:
+            for v in self.cfg.hw.genrate.values:
+                self.h_rate.addItem("%g kHz" % (v/1000))
+            self.h_rate.setEnabled(True)
         self.findRate()
 
     def selectHardware(self, idx):

@@ -33,12 +33,12 @@ class ESPChannels(QGroupBox):
         self.setWindowTitle("ESpark: Channels")
         self.cfg = cfg
         wdg = QWidget()
+        wdg.setObjectName("chndock")
         tlay = QGridLayout(self)
         tlay.setContentsMargins(0,0,0,0)
         tlay.addWidget(wdg)
         wdg.setStyleSheet("""
-        QWidget { background-color: #f8f8f8; }
-        QComboBox:item:selected { color: black; }
+        QWidget#chndock { background-color: #f8f8f8; }
         """)
         lay = QGridLayout(wdg)
         #lbl = QLabel("Stim", self)
@@ -57,8 +57,6 @@ This enables the use of correct units in the “Amplitude” boxes
 and graphs.''')
         lbl.setAlignment(Qt.AlignCenter)
         lay.addWidget(lbl,0,2,1,2)
-
-        #self.setFont(QFont(*self.cfg.font))
 
         self.h_chn = [None] * self.cfg.MAXCHANNELS
         self.h_scl = [None] * self.cfg.MAXCHANNELS

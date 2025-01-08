@@ -57,9 +57,6 @@ class ESVScaleMarks(QWidget):
     def paintEvent(self, evt):
         p = QPainter(self)
         pn = p.pen()
-        f = QFont(*self.cfg.font)
-        #f.setPointSize(7)
-        p.setFont(f)
         
         hp = self.height()
         wp = self.width()

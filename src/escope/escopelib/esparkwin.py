@@ -29,10 +29,11 @@ _TRAINCOL=2
 class MainWin(QWidget):
     channelsChanged = pyqtSignal()
     
-    def __init__(self, cfg, standalone=True):
+    def __init__(self, cfg, reccfg=None):
         super().__init__()
         self.cfg = cfg
-        self.standalone = standalone
+        self.reccfg = reccfg
+        self.standalone = reccfg is None
         self.ds = None
         self.h_hw = None
         self.h_chn = None
@@ -56,11 +57,16 @@ class MainWin(QWidget):
         self.makeContents()
         self.stylize()
         self.olay.update()
+        self.updaterecconfig(reccfg)
         QTimer.singleShot(1, lambda: self.resizeEvent())
+
+    def markrecconfig(reccfg):
+        self.reccfg = reccfg
+        if self.h_hw:
+            self.h_hw.reconfig(reccfg)
 
 
     def stylize(self):
-        #self.setFont(QFont(*self.cfg.font))
         self.setStyleSheet("""
         QLineEdit:!enabled { background-color: #f8f8f8; }
         QFrame { background-color: #f8f8f8; }
@@ -77,27 +83,24 @@ class MainWin(QWidget):
           border: 1px solid #888888;
           margin: 0px 0px 0px 0px;
           background: #cccccc; }
-        QGroupBox { background-color: #eeeeee; }
         """)
         
     def place(self):
         scr = QApplication.desktop()
         scrw = scr.screenGeometry().width()
         scrh = scr.screenGeometry().height()
-        self.resize(700,700)
-        self.move(scrw//2-self.width()//2,scrh//2-self.width()//2)
+        unit = QFontMetrics(self.font()).boundingRect("X").height()
+        self.resize(35*unit, 25*unit)
+        self.move(int(.6*scrw) - self.width()//2, int(.55*scrh) - self.height()//2)
 
     def makeButtons(self):
         butlay = QHBoxLayout()
         butlay.setContentsMargins(6, 6, 0, 0)
         butlay.setSpacing(10)
         
-        if self.standalone:
-            hw = QPushButton()
-            hw.setText("Hardware...")
-            hw.clicked.connect(self.click_hardware)
-        else:
-            hw = None
+        hw = QPushButton()
+        hw.setText("Hardware...")
+        hw.clicked.connect(self.click_hardware)
 
         cn = QPushButton()
         cn.setText("Channels...")
@@ -149,8 +152,7 @@ class MainWin(QWidget):
         butlay.addSpacing(10)
         butlay.addWidget(rp)
         butlay.addStretch(1)
-        if self.standalone:
-            butlay.addWidget(hw)
+        butlay.addWidget(hw)
         butlay.addWidget(cn)
         #butlay.addStretch(1)
         fr = QFrame()
@@ -475,8 +477,7 @@ class MainWin(QWidget):
         
         
     def click_hardware(self):
-        # This can only hapen in standalone
-        self.h_hw.reconfig()
+        self.h_hw.reconfig(self.reccfg)
         self.h_hw.setVisible(not self.h_hw.isVisible())
         QTimer.singleShot(1, lambda: self.resizeEvent())
 
@@ -520,6 +521,7 @@ class MainWin(QWidget):
             self.channelsChanged.emit()
 
     def resizeEvent(self, e=None):
+        print("resize", self.sizeHint(), self.canvas.height())
         w = self.scroll.viewport().width()
         self.canvas.resize(w, self.canvas.height())
 
@@ -634,21 +636,20 @@ class MainWin(QWidget):
         if not self.setConfig(cfg):
             QMessageBox.warning(self, "EScope",
                                 """Stimulus configuration is not
-                                compatible with current scope
-                                hardware settings""")
-            return 
-        for k in range(self.cfg.MAXCHANNELS):
-            for a in self.htr[k]:
-                for b in self.htr[k][a]:
-                    if b!='label':
-                        self.htr[k][a][b].reset()
-            for a in self.hpu[k]:
-                for b in self.hpu[k][a]:
-                    if b!='label':
-                        self.hpu[k][a][b].reset()
-            self.trainButEnable(k)
-            self.pulseButEnable(k)
-            self.newPulse('amp1_u.base', k, forcedraw=True)
+                                compatible with connected hardware""")
+        #    return 
+        #for k in range(self.cfg.MAXCHANNELS):
+        #    for a in self.htr[k]:
+        #        for b in self.htr[k][a]:
+        #            if b!='label':
+        #                self.htr[k][a][b].reset()
+        #    for a in self.hpu[k]:
+        #        for b in self.hpu[k][a]:
+        #            if b!='label':
+        #                self.hpu[k][a][b].reset()
+        #    self.trainButEnable(k)
+        #    self.pulseButEnable(k)
+        #    self.newPulse('amp1_u.base', k, forcedraw=True)
 
     def closeEvent(self,evt):
         if self.standalone:
@@ -659,19 +660,25 @@ class MainWin(QWidget):
         if cfg.hw.adapter not in self.cfg.hw.adapters:
             # Cannot load config for adapter that is not available
             return False
-        if not self.standalone:
-            if cfg.hw.adapter != self.cfg.hw.adapter:
-                # Cannot unilaterally change adapter
-                return False
-            oldrate = self.cfg.hw.genrate
         for k in self.cfg.__dict__:
             self.cfg.__dict__[k] = cfg.__dict__[k]
-        if not self.standalone:
-            # Simply ignore saved rate, as we are not in control
-            self.cfg.hw.genrate = oldrate
+        self.updaterecconfig(self.reccfg)
+        if self.h_hw:
+            self.h_hw.reconfig(self.reccfg)
+        self.hwChanged()
+        if self.h_chn:
+            self.h_chn.reconfig()
+        for k in range(self.cfg.MAXCHANNELS):
+            self.chnChanged(k)
+            
 
-    def importhardwaresettings(self, reccfg):
-        self.cfg.hw.adapter = reccfg.adapter
-        espconfig.confighardware(self.cfg)
-        self.cfg.hw.genrate.value = reccfg.acqrate.value
+    def updaterecconfig(self, reccfg):
+        self.reccfg = reccfg
+        if reccfg is None:
+            return
+        if reccfg.hw.adapter == self.cfg.hw.adapter \
+               and reccfg.hw.adapter[0] == 'picodaq':
+            self.cfg.hw.genrate = reccfg.hw.acqrate
+        if self.h_hw:
+            self.h_hw.reconfig(reccfg)
         self.hwChanged()

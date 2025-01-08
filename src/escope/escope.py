@@ -87,12 +87,12 @@ class MainWin(QMainWindow):
         self.inSweep = False
         self.saveSweepRequested = False
         self.setWindowTitle('EScope')
-        self.place()
         self.stylize()
         self.makeContents()
+        self.place()
 
     def stylize(self):
-        self.setFont(QFont(*self.cfg.font))
+        #self.setFont(QFont(*self.cfg.font))
         self.setStyleSheet("""
         QWidget#scope { background: black; }
         """)
@@ -101,18 +101,19 @@ class MainWin(QMainWindow):
         scr = QApplication.desktop()
         scrw = scr.screenGeometry().width()
         scrh = scr.screenGeometry().height()
-        self.resize(500,400)
-        self.move(scrw//2-self.width()//2,scrh//2-self.width()//2)
+        unit = QFontMetrics(self.font()).boundingRect("X").height()
+        self.resize(35*unit, 25*unit)
+        self.move(int(.4*scrw) - self.width()//2, int(.45*scrh) - self.width()//2)
+
+    def resizeEvent(self, evt):
+        fm = QFontMetricsF(self.font())
+        self.rpane.setFixedWidth(int(fm.boundingRect("|  500 mV").width()))
+        self.bpane.setFixedHeight(int(fm.boundingRect("1 ms").height()*1.5))
 
     def makeContents(self):
         LSIZE = 40
         RSIZE = 110
         BSIZE = 35
-
-        wdg = QLabel("500 mV", self)
-        RSIZE = max(wdg.sizeHint().width() + 4, 50)
-        wdg.setParent(None)
-        del wdg
 
         # First row of buttons
         hw = QPushButton()
@@ -284,7 +285,7 @@ class MainWin(QMainWindow):
 
         botlay = QHBoxLayout()
         dummy = QWidget(self)
-        dummy.setFixedSize(LSIZE, BSIZE)
+        dummy.setFixedSize(LSIZE, 2)
         botlay.addWidget(dummy)
         self.bpane = ESTMarks(self.cfg, self)
         self.bpane.setMinimumSize(50, BSIZE)
@@ -427,6 +428,8 @@ class MainWin(QMainWindow):
             print('Stopping soon')
 
     def stopRun(self):
+        if not self.ds:
+            return
         self.inSweep = False
         self.apane.stopRun()
         self.ds.stop()
@@ -468,7 +471,8 @@ class MainWin(QMainWindow):
         #print 'HARDWARE changed'
         if self.h_chn is not None and self.h_chn.isVisible():
             self.h_chn.reconfig()
-        self.propagateconfigtospark()
+        if self.h_spark:
+            self.h_spark.updaterecconfig(self.cfg)
         self.restart()
 
     def chnChanged(self):
@@ -613,7 +617,7 @@ class MainWin(QMainWindow):
 
     def click_stim(self):
         if self.h_spark is None:
-            self.h_spark = esparkwin.MainWin(self.sparkcfg, False)
+            self.h_spark = esparkwin.MainWin(self.sparkcfg, self.cfg)
             self.h_spark.channelsChanged.connect(self.spark_channel_change)
         if self.h_spark.isVisible():
             self.h_spark.close()
@@ -621,12 +625,8 @@ class MainWin(QMainWindow):
             self.h_spark.show()
             
     def spark_channel_change(self):
-        self.click_stop()
-        # Probably should check if running and restart automatically if so
-
-    def propagateconfigtospark(self):
-        if self.h_spark:
-            self.h_spark.importhardwaresettings(self.cfg.hw)
+        if self.cfg.hw.adapter == self.h_spark.cfg.hw.adapter:
+            self.restart()
 
     def click_display(self, val):
         self.apane.setDisplayStyle(val)

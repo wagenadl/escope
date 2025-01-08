@@ -76,7 +76,6 @@ class ESTMarks(QWidget):
 
     def paintEvent(self, evt):
         p = QPainter(self)
-        p.setFont(QFont(*self.cfg.font))
         
         hp = self.height()
         wp = self.width() + 0.
