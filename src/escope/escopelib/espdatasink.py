@@ -41,15 +41,18 @@ class ESPDataSink(QObject):
         self.chans = [self.cfg.conn.hw[k] for k in self.idx]
         self.nscans = 0
         for k in range(self.nchans):
-            timing = espconfig.mktiming(self.cfg,self.idx[k])
+            timing = espconfig.mktiming(self.cfg, self.idx[k])
             if timing[0]>self.nscans:
                 self.nscans = timing[0]
         self.dat = np.zeros((self.nscans+4, self.nchans))
         for k in range(self.nchans):
-            timing = espconfig.mktiming(self.cfg,self.idx[k])
+            timing = espconfig.mktiming(self.cfg, self.idx[k])
             espconfig.filltrain(self.cfg, self.idx[k], timing,
                                 self.dat[:,k])
         self.t_end_s = self.nscans/self.cfg.hw.genrate.value
+
+    def join(self, acqtask):
+        pass
 
     def run(self):
         self.running = True
@@ -83,29 +86,4 @@ class ESPDS_Dummy(ESPDataSink):
         self.killTimer(self.timerid)
         self.timerid=None
         self.markEnded()
-        print('espdatasink: timerevent: emitting runcomplete')
         self.runComplete.emit()
-
-        
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-
-    cfg = espconfig.basicconfig()
-    ds = ESPDS_Dummy(cfg)
-    ds.reconfig()
-
-    def rcv():
-        print("Recv!")
-        
-    ds.runComplete.connect(rcv)
-
-    win = QWidget()
-    win.show()
-
-    print('window open')
-    ds.reconfig()
-    print('configured')
-    ds.run()
-    print('running')
-    
-    app.exec_()

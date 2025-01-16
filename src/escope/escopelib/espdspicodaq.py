@@ -17,9 +17,22 @@
 
 from .espdsxxdaq import ESPDS_xxdaq
 from . import espicodaq
+from .espdatasink import ESPDS_Dummy
 
-class ESPDS_Picodaq(ESPDS_xxdaq):
-    def __ipicot__(self, cfg):
+class ESPDS_Picodaq_StandAlone(ESPDS_xxdaq):
+    def __init__(self, cfg):
         super().__init__(cfg)
         self.GenTask = espicodaq.FiniteProdTask
         
+class ESPDS_Picodaq_Joint(ESPDS_Dummy):
+    def __init__(self, cfg, reccfg):
+        super().__init__(cfg)
+        self.reccfg = reccfg
+
+    def join(self, acqtask):
+        """Join gentask with acqtask
+        """
+        if self.cfg.hw.adapter == self.reccfg.hw.adapter:
+            print("join", self.chans)
+            for k, ch in enumerate(self.chans):
+                acqtask.feedstimdata(self.cfg.hw.channels[ch], self.dat[:,k])

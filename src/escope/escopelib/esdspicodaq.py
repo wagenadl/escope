@@ -27,3 +27,5 @@ class ESDS_Picodaq(ESDS_xxdaq):
     def reconfig(self):
         super().reconfig()
         self.acqtask.setstimconfig(self.stimcfg)
+
+        

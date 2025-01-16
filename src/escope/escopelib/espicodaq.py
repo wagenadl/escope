@@ -130,7 +130,12 @@ class ContAcqTask:
         self.prepstim()
         self.prepped = True
 
+    def makegentask(self, chn, dtype):
+        return lambda: self.gentask(chn, dtype)
+
     def prepstim(self):
+        if self.stimcfg:
+            print("prepstim", self.stimcfg.conn.hw)
         self.stimdata = {}
         if not self.stimcfg:
             return
@@ -140,34 +145,43 @@ class ContAcqTask:
                 chn = self.stimcfg.hw.channels[c]
                 if chn.startswith("ao"):
                     self.stimdata[chn] = []
-                    self.th.addAnalogSource(chn, lambda: self.gentask(chn, np.float32))
+                    self.th.addAnalogSource(int(chn[2:]),
+                                            self.makegentask(chn, np.float32))
                 elif chn.startswith("do"):
-                    self.th.addDigitalSource(chn, lambda: self.gentask(chn, np.uint8))
+                    self.th.addDigitalSource(int(chn[2:]),
+                                             self.makegentask(chn, np.uint8))
                 else:
                     raise RuntimeError("Unsupported channel name")
 
     def feedstimdata(self, chn: str, data: ArrayLike, replace=False):
         # To drop data, set data = None and replace = True
+        print("feedstimdata", chn, data.shape, np.std(data), len(self.stimdata[chn]))
         with MutexHeld(self.mutex):
             if replace:
                 self.stimdata[chn] = []
             if data is not None:
                 self.stimdata[chn].append(data)
+        print("<feedstimdata")
 
     def gentask(self, chn: str, dtype):
         MAX = 1000 # Feed in small chunks, so canceling is possible
-        res = None
-        # Use the mutex because this is called from qadc thread
-        # Even with the GIL, we still need this to be atomic
-        with MutexHeld(self.mutex):
-            if len(self.stimdata[chn]):
-                if len(self.stimdata[chn][0]) > MAX:
-                    res = self.stimdata[chn][0][:MAX]
-                    self.stimdata[chn][0] = self.stimdata[chn][0][MAX:]
-                else:
-                    res = self.stimdata[chn].pop(0)
-        if res is None:
-            res = np.zeros(MAX, dtype)
+        while True:
+            res = None
+            # Use the mutex because this is called from qadc thread
+            # Even with the GIL, we still need this to be atomic
+            print("gentask mutex")
+            with MutexHeld(self.mutex):
+                print("gentask", chn, len(self.stimdata[chn]))
+                if len(self.stimdata[chn]):
+                    if len(self.stimdata[chn][0]) > MAX:
+                        res = self.stimdata[chn][0][:MAX]
+                        self.stimdata[chn][0] = self.stimdata[chn][0][MAX:]
+                    else:
+                        res = self.stimdata[chn].pop(0)
+            print("gentask ~mutex")
+            if res is None:
+                res = np.zeros(MAX, dtype)
+            yield res
 
             
     def run(self):

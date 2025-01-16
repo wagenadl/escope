@@ -35,6 +35,8 @@ class MainWin(QWidget):
         self.cfg = cfg
         self.reccfg = reccfg
         self.standalone = reccfg is None
+        self.acqtask = None
+        self.stopped = False
         self.ds = None
         self.h_hw = None
         self.h_chn = None
@@ -48,7 +50,6 @@ class MainWin(QWidget):
         self.olay = None
         self.scroll = None
         self.canvas = None
-        self.tid = None
 
         if self.standalone:
             self.setWindowTitle("ESpark")
@@ -150,6 +151,7 @@ class MainWin(QWidget):
 
         butlay.addWidget(ll)
         butlay.addWidget(rn)
+        butlay.addWidget(sp)
         butlay.addSpacing(10)
         butlay.addWidget(rp)
         butlay.addStretch(1)
@@ -533,15 +535,16 @@ class MainWin(QWidget):
 
 
     def click_stop(self):
-        self.tid = None
         self.stopRun()
 
     def click_rep(self, on):
         for k in range(self.cfg.MAXCHANNELS):
             self.trainButEnable(k)
 
+    def setAcqTask(self, acqtask):
+        self.acqtask = acqtask
+
     def startRun(self):
-        #print 'startRun'
         self.h_run.hide()
         self.h_stop.show()
         self.h_led.turnOn()
@@ -550,11 +553,13 @@ class MainWin(QWidget):
         self.ds = espsinks.makeDataSink(self.cfg, self.reccfg)
         self.ds.runComplete.connect(self.doneRun)
         self.ds.reconfig()
+        self.ds.join(self.acqtask)
+        self.stopped = False
         self.ds.run()
         #print '  startRun ->', self, self.ds
 
     def stopRun(self):
-        #print 'stopRun', self, self.ds
+        self.stopped = True
         self.h_run.show()
         self.h_stop.hide()
         self.h_led.turnOff()
@@ -565,23 +570,20 @@ class MainWin(QWidget):
     def doneRun(self):
         self.h_led.turnOff()
         rep = self.h_rep.isChecked()
-        # self.h_run.setChecked(False)
         self.ds = None
         if rep:
-            self.tid = self.startTimer(int(self.cfg.train[0].period_s.base*1000))
+            QTimer.singleShot(int(self.cfg.train[0].period_s.base*1000), lambda: self.repeatRun())
         else:
             self.h_run.show()
             self.h_stop.hide()
 
-    def timerEvent(self, evt):
-        if evt.timerId() == self.tid:
-            self.killTimer(self.tid)
-            self.tid = None
-            if self.h_rep.isChecked():
-                self.startRun()
-            else:
-                self.h_run.show()
-                self.h_stop.hide()
+    def repeatRun(self):
+        print("timerevent", self.h_rep.isChecked(), self.stopped)
+        if self.h_rep.isChecked() and not self.stopped:
+            self.startRun()
+        else:
+            self.h_run.show()
+            self.h_stop.hide()
 
     def click_about(self):
         abt = QMessageBox()

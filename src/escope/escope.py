@@ -396,6 +396,7 @@ class MainWin(QMainWindow):
     def spark_runrequest(self):
         if not self.ds:
             self.startRun()
+        self.h_spark.setAcqTask(self.ds.source.acqtask)
         self.h_spark.startRun()
 
     def startRun(self):
@@ -444,6 +445,8 @@ class MainWin(QMainWindow):
         self.apane.stopRun()
         self.ds.stop()
         self.ds.stopCapture()
+        if self.h_spark:
+            self.h_spark.setAcqTask(None)
         self.ds = None
         p=self.hsweepno.palette()
         p.setColor(QPalette.WindowText,QColor("gray"))

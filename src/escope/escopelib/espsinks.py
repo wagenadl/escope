@@ -21,15 +21,14 @@ from . import espdatasink
 from . import espdsnidaq
 from . import espdspicodaq
 
-def makeDataSink(cfg, reccfg):
+def makeDataSink(cfg, reccfg=None):
     if cfg.hw.adapter[0]=='nidaq':
         return espdsnidaq.ESPDS_Nidaq(cfg)
     elif cfg.hw.adapter[0]=='picodaq':
         if reccfg and reccfg.hw.adapter == cfg.hw.adapter:
-            return espdatasink.ESPDS_Dummy(cfg)
-            #raise RuntimeError("Joint NYI")
+            return espdspicodaq.ESPDS_Picodaq_Joint(cfg, reccfg)
         else:
-            return espdspicodaq.ESPDS_Picodaq(cfg)
+            return espdspicodaq.ESPDS_Picodaq_StandAlone(cfg)
     elif cfg.hw.adapter[0]=='dummy':
         return espdatasink.ESPDS_Dummy(cfg)
     else:
