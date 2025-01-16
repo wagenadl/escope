@@ -20,6 +20,6 @@ from . import espicodaq
 
 class ESPDS_Picodaq(ESPDS_xxdaq):
     def __ipicot__(self, cfg):
-        super().__ipicot__(cfg)
+        super().__init__(cfg)
         self.GenTask = espicodaq.FiniteProdTask
         

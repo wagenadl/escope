@@ -21,6 +21,7 @@ Wrapper for picoDAQ functions
 
 import numpy as np
 from numpy.typing import ArrayLike
+from PyQt5.QtCore import QMutex
 
 class MutexHeld:
     def __init__(self, mutex):
@@ -40,9 +41,10 @@ try:
     import picodaq.qdac
     pdaq = True
     print("(got picodaq)")
-except ImportError:
+except ImportError as exc:
     import sys
     pdaq = None
+    print(exc)
     print("No picodaq library")
 
 

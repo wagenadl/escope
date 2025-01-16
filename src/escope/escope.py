@@ -2,6 +2,8 @@
 
 # escope.py
 
+VERSION = "4.0-alpha"
+
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
@@ -10,20 +12,23 @@ import os
 import re
 import pickle
 import numpy as np
-from escopelib import esconfig
-from escopelib.eshardware import ESHardware
-from escopelib.eschannels import ESChannels
-from escopelib.estrigger import ESTrigger
-from escopelib.esvzeromarks import ESVZeroMarks
-from escopelib.esvscalemarks import ESVScaleMarks
-from escopelib.estmarks import ESTMarks
-from escopelib.esscopewin import ESScopeWin
-from escopelib.estriggerbuffer import ESTriggerBuffer
-from escopelib import serializer
-from escopelib.ledlabel import LEDLabel
-from escopelib import esparkwin
 
-VERSION = "4.0-alpha"
+from .escopelib import esconfig
+from .escopelib.eshardware import ESHardware
+from .escopelib.eschannels import ESChannels
+from .escopelib.estrigger import ESTrigger
+from .escopelib.esvzeromarks import ESVZeroMarks
+from .escopelib.esvscalemarks import ESVScaleMarks
+from .escopelib.estmarks import ESTMarks
+from .escopelib.esscopewin import ESScopeWin
+from .escopelib.estriggerbuffer import ESTriggerBuffer
+from .escopelib import serializer
+from .escopelib.ledlabel import LEDLabel
+from .escopelib import esparkwin
+
+
+import signal
+signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 
 def _parsefilename(name):
@@ -386,7 +391,12 @@ class MainWin(QMainWindow):
     def deviceerror(self, msg):
         self.click_stop()
         QMessageBox.warning(self, "EScope",
-                            "Device error: {msg}. Acquisition stopped.");
+                            "Device error: {msg}. Acquisition stopped.")
+
+    def spark_runrequest(self):
+        if not self.ds:
+            self.startRun()
+        self.h_spark.startRun()
 
     def startRun(self):
         self.h_run.hide()
@@ -619,6 +629,7 @@ class MainWin(QMainWindow):
         if self.h_spark is None:
             self.h_spark = esparkwin.MainWin(self.sparkcfg, self.cfg)
             self.h_spark.channelsChanged.connect(self.spark_channel_change)
+            self.h_spark.runRequested.connect(self.spark_runrequest)
         if self.h_spark.isVisible():
             self.h_spark.close()
         else:

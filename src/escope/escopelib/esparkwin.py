@@ -28,6 +28,7 @@ _TRAINCOL=2
 
 class MainWin(QWidget):
     channelsChanged = pyqtSignal()
+    runRequested = pyqtSignal()
     
     def __init__(self, cfg, reccfg=None):
         super().__init__()
@@ -521,20 +522,19 @@ class MainWin(QWidget):
             self.channelsChanged.emit()
 
     def resizeEvent(self, e=None):
-        print("resize", self.sizeHint(), self.canvas.height())
         w = self.scroll.viewport().width()
         self.canvas.resize(w, self.canvas.height())
 
     def click_run(self):
-        self.startRun()
-        self.h_run.hide()
-        self.h_stop.show()
+        if self.standalone:
+            self.startRun()
+        else:
+            self.runRequested.emit()
+
 
     def click_stop(self):
         self.tid = None
         self.stopRun()
-        self.h_run.show()
-        self.h_stop.hide()
 
     def click_rep(self, on):
         for k in range(self.cfg.MAXCHANNELS):
@@ -542,10 +542,12 @@ class MainWin(QWidget):
 
     def startRun(self):
         #print 'startRun'
+        self.h_run.hide()
+        self.h_stop.show()
         self.h_led.turnOn()
         if self.ds:
             return # already running
-        self.ds = espsinks.makeDataSink(self.cfg)
+        self.ds = espsinks.makeDataSink(self.cfg, self.reccfg)
         self.ds.runComplete.connect(self.doneRun)
         self.ds.reconfig()
         self.ds.run()
@@ -553,6 +555,8 @@ class MainWin(QWidget):
 
     def stopRun(self):
         #print 'stopRun', self, self.ds
+        self.h_run.show()
+        self.h_stop.hide()
         self.h_led.turnOff()
         if self.ds:
             self.ds.stop()
@@ -574,7 +578,7 @@ class MainWin(QWidget):
             self.killTimer(self.tid)
             self.tid = None
             if self.h_rep.isChecked():
-                self.click_run()
+                self.startRun()
             else:
                 self.h_run.show()
                 self.h_stop.hide()
