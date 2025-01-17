@@ -21,18 +21,7 @@ Wrapper for picoDAQ functions
 
 import numpy as np
 from numpy.typing import ArrayLike
-from PyQt5.QtCore import QMutex
-
-class MutexHeld:
-    def __init__(self, mutex):
-        self.mutex = mutex
-
-    def __enter__(self):
-        self.mutex.lock()
-        return self
-
-    def __exit__(self, *args):
-        self.mutex.unlock() # even in case of exception
+from PyQt5.QtCore import QTimer
 
 
 try:
@@ -98,7 +87,6 @@ class ContAcqTask:
         self.rdr = None
         self.stimcfg = None
         self.stimdata = {} # keys are "ao0", "do2", etc.
-        self.mutex = QMutex()
 
     def __del__(self):
         self.stop()
@@ -156,11 +144,10 @@ class ContAcqTask:
     def feedstimdata(self, chn: str, data: ArrayLike, replace=False):
         # To drop data, set data = None and replace = True
         print("feedstimdata", chn, data.shape, np.std(data), len(self.stimdata[chn]))
-        with MutexHeld(self.mutex):
-            if replace:
-                self.stimdata[chn] = []
-            if data is not None:
-                self.stimdata[chn].append(data)
+        if replace:
+            self.stimdata[chn] = []
+        if data is not None:
+            self.stimdata[chn].append(data)
         print("<feedstimdata")
 
     def gentask(self, chn: str, dtype):
@@ -170,14 +157,13 @@ class ContAcqTask:
             # Use the mutex because this is called from qadc thread
             # Even with the GIL, we still need this to be atomic
             print("gentask mutex")
-            with MutexHeld(self.mutex):
-                print("gentask", chn, len(self.stimdata[chn]))
-                if len(self.stimdata[chn]):
-                    if len(self.stimdata[chn][0]) > MAX:
-                        res = self.stimdata[chn][0][:MAX]
-                        self.stimdata[chn][0] = self.stimdata[chn][0][MAX:]
-                    else:
-                        res = self.stimdata[chn].pop(0)
+            print("gentask", chn, len(self.stimdata[chn]))
+            if len(self.stimdata[chn]):
+                if len(self.stimdata[chn][0]) > MAX:
+                    res = self.stimdata[chn][0][:MAX]
+                    self.stimdata[chn][0] = self.stimdata[chn][0][MAX:]
+                else:
+                    res = self.stimdata[chn].pop(0)
             print("gentask ~mutex")
             if res is None:
                 res = np.zeros(MAX, dtype)
