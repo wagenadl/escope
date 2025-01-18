@@ -646,6 +646,7 @@ class MainWin(QMainWindow):
         self.apane.setDisplayStyle(val)
 
     def closeEvent(self,evt):
+        self.click_stop()
         QApplication.quit()
 
 def main():

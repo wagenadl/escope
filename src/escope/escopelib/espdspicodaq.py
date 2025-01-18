@@ -34,5 +34,4 @@ class ESPDS_Picodaq_Joint(ESPDS_Dummy):
         """
         if self.cfg.hw.adapter == self.reccfg.hw.adapter:
             print("join", self.chans)
-            for k, ch in enumerate(self.chans):
-                acqtask.feedstimdata(self.cfg.hw.channels[ch], self.dat[:,k])
+            acqtask.feedstimdata(self.dat)

@@ -21,13 +21,14 @@ Wrapper for picoDAQ functions
 
 import numpy as np
 from numpy.typing import ArrayLike
-from PyQt5.QtCore import QTimer
+from typing import List, Optional, Tuple, Callable
+from PyQt5.QtCore import QTimer, QThread, QMutex, pyqtSignal, Qt
+from multiprocessing.connection import Connection
 
 
 try:
     import picodaq
-    import picodaq.qadc
-    import picodaq.qdac
+    from picodaq.background import DAQProcess
     pdaq = True
     print("(got picodaq)")
 except ImportError as exc:
@@ -37,7 +38,16 @@ except ImportError as exc:
     print("No picodaq library")
 
 
-def deviceList():
+class Mutex(QMutex):
+    def __enter__(self):
+        self.lock()
+        return self
+
+    def __exit__(self, *args):
+        self.unlock()
+
+    
+def deviceList() -> List[str]:
     if pdaq is None:
         return []   
     devs = []
@@ -48,7 +58,8 @@ def deviceList():
             devs.append(port)
     return devs
 
-def devAIChannels(dev):
+
+def devAIChannels(dev: str) -> List[str]:
     if dev.startswith("ACM"):
         dev = "/dev/tty" + dev
     p = picodaq.device.PicoDAQ(dev)
@@ -56,7 +67,8 @@ def devAIChannels(dev):
     nAIchannels = int(info['AI'])
     return [f"ai{k}" for k in range(nAIchannels)]
 
-def devAOChannels(dev):
+
+def devAOChannels(dev: str) -> List[str]:
     if dev.startswith("ACM"):
         dev = "/dev/tty" + dev
     p = picodaq.device.PicoDAQ(dev)
@@ -64,7 +76,8 @@ def devAOChannels(dev):
     nAOchannels = int(info['AO'])
     return [f"ao{k}" for k in range(nAOchannels)]
 
-def devDOChannels(dev):
+
+def devDOChannels(dev: str) -> List[str]:
     if dev.startswith("ACM"):
         dev = "/dev/tty" + dev
     p = picodaq.device.PicoDAQ(dev)
@@ -72,21 +85,105 @@ def devDOChannels(dev):
     nDOchannels = int(info['DO'])
     return [f"do{k}" for k in range(nDOchannels)]
 
+
+######################################################################
+class Reader(QThread):
+    dataAvailable = pyqtSignal()
+    
+    def __init__(self, conn: Connection, callback: Optional[Callable],
+                 every: int):
+        super().__init__()
+        self.conn = conn
+        self.stopsoon = False
+        self.data = []
+        if callback is not None and every > 0:
+            self.dataAvailable.connect(callback, Qt.QueuedConnection)
+        self.mutex = Mutex()
+        self.every = every
+        self.accum = 0
+        super().start()
+
+    def stop(self) -> None:
+        self.stopsoon = True
+        if not self.wait(1000):
+            raise RuntimeError("Could not stop reader thread")
+
+    def accumulated(self):
+        with self.mutex:
+            acc = self.accum
+        return acc
+
+    def read(self, count=None) -> Optional[Tuple[ArrayLike, ArrayLike]]:
+        """Read accumulated data
+
+        If count is given, reads at most that many scans.
+        Otherwise, reads one chunk.
+        Returns an (adata, ddata) pair or None
+        """
+        if count:
+            adat = []
+            ddat = []
+            got = 0
+            with self.mutex:
+                while self.data and got < count:
+                    adat1, ddat1 = self.data[0]
+                    N = len(adat1)
+                    now = min(N, count - got)
+                    adat.append(adat1[:now])
+                    ddat.append(ddat1[:now])
+                    if now < N:
+                        adat1 = adat1[now:]
+                        ddat1 = ddat1[now:]
+                        self.data[0] = (adat1, ddat1)
+                    else:
+                        del self.data[0]
+                    got += now
+            if got > 0:
+                adat = np.concatenate(adat, 0)
+                ddat = np.concatenate(ddat, 0)
+                return adat, ddat
+            else:
+                return None
+        else:
+            dat = None
+            with self.mutex:
+                if self.data:
+                    dat = self.data.pop(0)
+            return dat
+        
+    def run(self):
+        # Do not call, private thread function
+        print("reader running")
+        while not self.stopsoon:
+            if self.conn.poll(0.1):
+                dat = self.conn.recv() # adata, ddata
+                #print(type(dat))
+                with self.mutex:
+                    self.data.append(dat)
+                    self.accum += len(dat[0])
+                    mustemit = self.accum >= self.every
+                #print(len(self.data), self.accum, self.every, mustemit)
+                if mustemit:
+                    self.accum -= self.every
+                    self.dataAvailable.emit()
+        print("reader done")
+
 ######################################################################
 class ContAcqTask:
-    def __init__(self, dev, chans, acqrate_hz, rnge):
+    def __init__(self, dev: str, chans: List[int],
+                 acqrate_hz: float, rnge):
         self.dev = dev # e.g., "ACM0"
         self.chans = chans
-        self.range = rnge
         self.acqrate_hz = acqrate_hz
         self.foo = None
-        self.th = None # a picodaq.qadc.ADC instance
+        self.pd = None # a picodaq.background.DAQProcess instance
+        self.rd = None # a Reader instance
         self.nscans = 1000
         self.prepped = False
         self.running = False
         self.rdr = None
         self.stimcfg = None
-        self.stimdata = {} # keys are "ao0", "do2", etc.
+        self.ochans: List[str] = []
 
     def __del__(self):
         self.stop()
@@ -94,8 +191,14 @@ class ContAcqTask:
 
     def setstimconfig(self, stimcfg):
         self.stimcfg = stimcfg
+        self.ochans = []
+        if stimcfg:
+            for c in stimcfg.conn.hw:
+                if c is not None:
+                    self.ochans.append(self.stimcfg.hw.channels[c])
+            
 
-    def setCallback(self, foo, nscans):
+    def setCallback(self, foo: Callable, nscans: int):
         self.unprep()
         self.foo = foo
         self.nscans = nscans
@@ -103,102 +206,78 @@ class ContAcqTask:
     def prep(self):
         if self.prepped:
             return
-        if picodaq is None:
-            raise AttributeError('No picoDAQ library found')
-        chans = []
+        if not pdaq:
+            raise RuntimeError('No picoDAQ library found')
+        ichans = []
         for c in self.chans:
             if c.startswith("ai"):
-                chans.append(int(c[2:]))
-        self.nchans = len(chans)
-        self.th = picodaq.qadc.ADC(self.dev) # must pick correct dev
-        self.th.setAnalogChannels(chans)
-        self.th.setRate(self.acqrate_hz*picodaq.units.Hz)
-        if self.foo is not None:
-            self.th.setEvery(self.nscans, self.foo)
-        self.prepstim()
+                ichans.append(int(c[2:]))
+        self.nchans = len(ichans)
+        ochans = []
+        olines = []
+        for chn in self.ochans:
+            if chn.startswith("ao"):
+                ochans.append(int(chn[2:]))
+            elif chn.startswith("do"):
+                olines.append(int(chn[2:]))
+            else:
+                raise ValueError("Bad channel name")
+        self.pd = DAQProcess(port=self.dev,
+                             rate=self.acqrate_hz*picodaq.units.Hz,
+                             aichannels=ichans,
+                             aochannels=ochans,
+                             dolines=olines)
         self.prepped = True
 
-    def makegentask(self, chn, dtype):
-        return lambda: self.gentask(chn, dtype)
-
-    def prepstim(self):
-        if self.stimcfg:
-            print("prepstim", self.stimcfg.conn.hw)
-        self.stimdata = {}
-        if not self.stimcfg:
-            return
-        print(self.stimcfg)
-        for c in self.stimcfg.conn.hw:
-            if c is not None:
-                chn = self.stimcfg.hw.channels[c]
-                if chn.startswith("ao"):
-                    self.stimdata[chn] = []
-                    self.th.addAnalogSource(int(chn[2:]),
-                                            self.makegentask(chn, np.float32))
-                elif chn.startswith("do"):
-                    self.th.addDigitalSource(int(chn[2:]),
-                                             self.makegentask(chn, np.uint8))
-                else:
-                    raise RuntimeError("Unsupported channel name")
-
-    def feedstimdata(self, chn: str, data: ArrayLike, replace=False):
-        # To drop data, set data = None and replace = True
-        print("feedstimdata", chn, data.shape, np.std(data), len(self.stimdata[chn]))
-        if replace:
-            self.stimdata[chn] = []
-        if data is not None:
-            self.stimdata[chn].append(data)
-        print("<feedstimdata")
-
-    def gentask(self, chn: str, dtype):
-        MAX = 1000 # Feed in small chunks, so canceling is possible
-        while True:
-            res = None
-            # Use the mutex because this is called from qadc thread
-            # Even with the GIL, we still need this to be atomic
-            print("gentask mutex")
-            print("gentask", chn, len(self.stimdata[chn]))
-            if len(self.stimdata[chn]):
-                if len(self.stimdata[chn][0]) > MAX:
-                    res = self.stimdata[chn][0][:MAX]
-                    self.stimdata[chn][0] = self.stimdata[chn][0][MAX:]
-                else:
-                    res = self.stimdata[chn].pop(0)
-            print("gentask ~mutex")
-            if res is None:
-                res = np.zeros(MAX, dtype)
-            yield res
-
+    def feedstimdata(self, data: ArrayLike) -> None:
+        """Add data to output queue
+        Shape of data must match config
+        """
+        if not self.pd:
+            raise RuntimeError("Not prepared")
+        aidx = []
+        didx = []
+        for k, chn in enumerate(self.ochans):
+            if chn.startswith("ao"):
+                aidx.append(k)
+            elif chn.startswith("do"):
+                didx.append(k)
+            else:
+                raise ValueError("Bad channel name")
+        self.pd.write(data[:,aidx], data[:,didx])
             
-    def run(self):
+    def run(self) -> None:
         if not self.prepped:
             self.prep()
         if not self.prepped:
-            print('Failed to prepare, cannot run')
-            return
+            raise RuntimeError('Failed to prepare, cannot run')
         if self.running:
             return
-        self.th.start()
+        print("espicodaq run")
+        self.pd.start()
+        self.rd = Reader(self.pd.conn, self.foo, self.nscans)
         self.running = True
      
-    def stop(self):
+    def stop(self) -> None:
         if self.running:
-            self.th.stop()
+            self.rd.stop()
+            self.rd = None
+            self.pd.stop()
             self.running = False
 
-    def unprep(self):
+    def unprep(self) -> None:
         if self.running:
-            raise AttributeError('Cannot unprepare while running')
+            raise RuntimeError('Cannot unprepare while running')
         if self.prepped:
             self.prepped = False
-            self.th = None
+            self.pd = None
     
-    def getData(self, dst):
+    def getData(self, dst: np.ndarray) -> int:
         if not self.running:
             return 0
         T, C = dst.shape
         nscans = min(T, self.nscans)
-        adat, ddat = self.th.read(nscans)
+        adat, ddat = self.rd.read(nscans)
         n = len(adat)
         dst[:n, :] = adat
         return n
@@ -207,40 +286,54 @@ class ContAcqTask:
 
 
 class FiniteProdTask:
-    def __init__(self, dev, chans, genrate_hz, data):
+    def __init__(self, dev: str, chans: List[str],
+                 genrate_hz: float, data: ArrayLike):
         self.dev = dev
         self.chans = chans # i.e., names of the channels
         self.genrate_hz = genrate_hz
-        self.th = None
+        self.pd = None
+        self.rd = None
         self.foo = None
         self.prepped = False
         self.running = False
+        self.data = data
 
     def __del__(self):
         self.stop()
         self.unprep()
 
-    def setData(self, data):
+    def setData(self, data: ArrayLike) -> None:
         self.unprep()
         self.data = data
 
-    def setCallback(self, foo):
+    def setCallback(self, foo: Callable) -> None:
         self.unprep()
         self.foo = foo
 
-    def prep(self):
+    def prep(self) -> None:
         if self.prepped:
             return
-        if picodaq is None:
-            raise AttributeError('No PicoDAQ library found')
+        if not pdaq:
+            raise RuntimeError('No PicoDAQ library found')
         print("dev = ", self.dev)
-        self.th = picodaq.qdac.DAC(self.dev)
-        for k, ch in enumerate(self.chans):
-            if ch.lower().startswith("ao"):
-                self.th.addAnalogSource(int(ch[2:], self.data[:,k]))
-            elif ch.lower().startswith("do"):
-                self.th.addDigitalSource(int(ch[2:], self.data[:,k]))
-        self.th.setRate(self.genrate_hz * picodaq.units.Hz)
+        ochans = []
+        olines = []
+        aidx = []
+        didx = []
+        for k, chn in enumerate(self.chans):
+            if chn.startswith("ao"):
+                ochans.append(int(chn[2:]))
+                aidx.append(k)
+            elif chn.startswith("do"):
+                olines.append(int(chn[2:]))
+                didx.append(k)
+            else:
+                raise ValueError("Bad channel name")
+        self.pd = DAQProcess(port=self.dev,
+                             rate=self.genrate_hz*picodaq.units.Hz,
+                             aochannels=ochans,
+                             dolines=olines)
+        self.pd.write(self.data[:,aidx], self.data[:,didx])
         self.prepped = True
 
     def run(self):
@@ -248,32 +341,36 @@ class FiniteProdTask:
             self.prep()
         if self.running:
             return
-        self.th.start(self.foo)
+        self.rd = Reader(self.pd.conn, self.foo, len(self.data))
+        self.pd.start()
         self.running = True
      
     def stop(self):
-        if self.running:
-            self.th.stop()
-            self.running = False
+        if not self.running:
+            return
+        self.rd.stop()
+        self.rd = None
+        self.pd.stop()
+        self.running = False
 
     def isRunning(self):
         if not self.running:
             return False
-        if self.th.isfinished():
-            self.running = False
-            self.th.stop()
+        if self.rd.accumulated() >= len(self.data):
+            stop()
             return False
         return True       
     
     def unprep(self):
         #print 'FiniteProdTask: unprep, nidaq=',nidaq, ' prepped=',self.prepped, ' th=',self.th
         if self.isRunning():
-            raise AttributeError('Cannot unprepare while running')
+            raise RuntimeError('Cannot unprepare while running')
         if self.prepped:
             self.prepped = False
-            self.th = None
+            self.pd = None
+            
 ######################################################################
-if picodaq:
+if pdaq:
     if not deviceList():
         pdaq = None
         print("No picoDAQ devices")
