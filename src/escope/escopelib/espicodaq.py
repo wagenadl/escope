@@ -156,7 +156,12 @@ class Reader(QThread):
         print("reader running")
         while not self.stopsoon:
             if self.conn.poll(0.1):
-                dat = self.conn.recv() # adata, ddata
+                try:
+                    dat = self.conn.recv() # adata, ddata
+                except EOFError:
+                    print("eoferror")
+                    self.dataAvailable.emit() # lie, but we need attention
+                    break
                 #print(type(dat))
                 with self.mutex:
                     self.data.append(dat)
@@ -262,8 +267,8 @@ class ContAcqTask:
         if self.running:
             self.rd.stop()
             self.rd = None
-            self.pd.stop()
             self.running = False
+            self.pd.stop()
 
     def unprep(self) -> None:
         if self.running:
