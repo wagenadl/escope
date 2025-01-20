@@ -22,9 +22,9 @@ Wrapper for picoDAQ functions
 import numpy as np
 from numpy.typing import ArrayLike
 from typing import List, Optional, Tuple, Callable
-from PyQt5.QtCore import QTimer, QThread, QMutex, pyqtSignal, Qt
+from PyQt5.QtCore import QTimer, pyqtSignal, Qt
 from multiprocessing.connection import Connection
-
+import time
 
 try:
     import picodaq
@@ -36,15 +36,6 @@ except ImportError as exc:
     pdaq = None
     print(exc)
     print("No picodaq library")
-
-
-class Mutex(QMutex):
-    def __enter__(self):
-        self.lock()
-        return self
-
-    def __exit__(self, *args):
-        self.unlock()
 
     
 def deviceList() -> List[str]:
@@ -86,92 +77,6 @@ def devDOChannels(dev: str) -> List[str]:
     return [f"do{k}" for k in range(nDOchannels)]
 
 
-######################################################################
-class Reader(QThread):
-    dataAvailable = pyqtSignal()
-    
-    def __init__(self, conn: Connection, callback: Optional[Callable],
-                 every: int):
-        super().__init__()
-        self.conn = conn
-        self.stopsoon = False
-        self.data = []
-        if callback is not None and every > 0:
-            self.dataAvailable.connect(callback, Qt.QueuedConnection)
-        self.mutex = Mutex()
-        self.every = every
-        self.accum = 0
-        super().start()
-
-    def stop(self) -> None:
-        self.stopsoon = True
-        if not self.wait(1000):
-            raise RuntimeError("Could not stop reader thread")
-
-    def accumulated(self):
-        with self.mutex:
-            acc = self.accum
-        return acc
-
-    def read(self, count=None) -> Optional[Tuple[ArrayLike, ArrayLike]]:
-        """Read accumulated data
-
-        If count is given, reads at most that many scans.
-        Otherwise, reads one chunk.
-        Returns an (adata, ddata) pair or None
-        """
-        if count:
-            adat = []
-            ddat = []
-            got = 0
-            with self.mutex:
-                while self.data and got < count:
-                    adat1, ddat1 = self.data[0]
-                    N = len(adat1)
-                    now = min(N, count - got)
-                    adat.append(adat1[:now])
-                    ddat.append(ddat1[:now])
-                    if now < N:
-                        adat1 = adat1[now:]
-                        ddat1 = ddat1[now:]
-                        self.data[0] = (adat1, ddat1)
-                    else:
-                        del self.data[0]
-                    got += now
-            if got > 0:
-                adat = np.concatenate(adat, 0)
-                ddat = np.concatenate(ddat, 0)
-                return adat, ddat
-            else:
-                return None
-        else:
-            dat = None
-            with self.mutex:
-                if self.data:
-                    dat = self.data.pop(0)
-            return dat
-        
-    def run(self):
-        # Do not call, private thread function
-        print("reader running")
-        while not self.stopsoon:
-            if self.conn.poll(0.1):
-                try:
-                    dat = self.conn.recv() # adata, ddata
-                except EOFError:
-                    print("eoferror")
-                    self.dataAvailable.emit() # lie, but we need attention
-                    break
-                #print(type(dat))
-                with self.mutex:
-                    self.data.append(dat)
-                    self.accum += len(dat[0])
-                    mustemit = self.accum >= self.every
-                #print(len(self.data), self.accum, self.every, mustemit)
-                if mustemit:
-                    self.accum -= self.every
-                    self.dataAvailable.emit()
-        print("reader done")
 
 ######################################################################
 class ContAcqTask:
@@ -182,13 +87,14 @@ class ContAcqTask:
         self.acqrate_hz = acqrate_hz
         self.foo = None
         self.pd = None # a picodaq.background.DAQProcess instance
-        self.rd = None # a Reader instance
+        self.buffer = []
+        self.bufcount = 0
         self.nscans = 1000
         self.prepped = False
         self.running = False
-        self.rdr = None
         self.stimcfg = None
         self.ochans: List[str] = []
+        self.timer = None
 
     def __del__(self):
         self.stop()
@@ -260,15 +166,36 @@ class ContAcqTask:
             return
         print("espicodaq run")
         self.pd.start()
-        self.rd = Reader(self.pd.conn, self.foo, self.nscans)
+        self.timer = QTimer()
+        self.timer.timeout.connect(lambda: self.poll())
+        self.timer.start(10)
         self.running = True
+
+    def poll(self):
+        if not self.running:
+            return
+        print("poll", time.time())
+        try:
+            dat = self.pd.read()
+        except EOFError:
+            self.stop()
+            raise
+        if not dat:
+            return
+        adat, _ = dat
+        self.buffer.append(adat)
+        self.bufcount += len(adat)
+        if self.bufcount >= self.nscans:
+            if self.foo:
+                self.foo()
+            self.bufcount -= self.nscans
      
     def stop(self) -> None:
         if self.running:
-            self.rd.stop()
-            self.rd = None
             self.running = False
             self.pd.stop()
+            self.timer.stop()
+            self.timer = None
 
     def unprep(self) -> None:
         if self.running:
@@ -281,11 +208,17 @@ class ContAcqTask:
         if not self.running:
             return 0
         T, C = dst.shape
-        nscans = min(T, self.nscans)
-        adat, ddat = self.rd.read(nscans)
-        n = len(adat)
-        dst[:n, :] = adat
-        return n
+        if len(self.buffer):
+            dat = np.concatenate(self.buffer, 0)
+        nscans = min(T, self.nscans, len(dat))
+        if nscans < len(dat):
+            self.buffer = [dat[nscans:]]
+            self.bufcount = len(self.buffer[0])
+        else:
+            self.buffer = []
+            self.bufcount = 0
+        dst[:nscans] = dat[:nscans]
+        return nscans
 
 ######################################################################
 
