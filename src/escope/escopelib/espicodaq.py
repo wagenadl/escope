@@ -22,15 +22,14 @@ Wrapper for picoDAQ functions
 import numpy as np
 from numpy.typing import ArrayLike
 from typing import List, Optional, Tuple, Callable
-from PyQt5.QtCore import QTimer, pyqtSignal, Qt
-from multiprocessing.connection import Connection
+from PyQt5.QtCore import QTimer, pyqtSignal, Qt, QProcess
 import time
 
 try:
     import picodaq
-    from picodaq.background import DAQProcess
     pdaq = True
     print("(got picodaq)")
+    pdserver = "/home/wagenaar/cntlgit/picodaq-241001/software/pdserver"
 except ImportError as exc:
     import sys
     pdaq = None
@@ -76,24 +75,25 @@ def devDOChannels(dev: str) -> List[str]:
     nDOchannels = int(info['DO'])
     return [f"do{k}" for k in range(nDOchannels)]
 
+######################################################################
 
 
 ######################################################################
 class ContAcqTask:
-    def __init__(self, dev: str, chans: List[int],
+    def __init__(self, dev: str, chans: List[str],
                  acqrate_hz: float, rnge):
         self.dev = dev # e.g., "ACM0"
-        self.chans = chans
+        self.chans = chans # "aix"
         self.acqrate_hz = acqrate_hz
         self.foo = None
-        self.pd = None # a picodaq.background.DAQProcess instance
-        self.buffer = []
+        self.pd = None # a pdserver QProcess
+        self.buffer = [] # incoming
         self.bufcount = 0
-        self.nscans = 1000
+        self.every = 1000
         self.prepped = False
         self.running = False
         self.stimcfg = None
-        self.ochans: List[str] = []
+        self.ochans: List[str] = [] # "aox" and "dox"
         self.timer = None
 
     def __del__(self):
@@ -107,95 +107,74 @@ class ContAcqTask:
             for c in stimcfg.conn.hw:
                 if c is not None:
                     self.ochans.append(self.stimcfg.hw.channels[c])
-            
 
-    def setCallback(self, foo: Callable, nscans: int):
+    def setCallback(self, foo: Callable, every: int):
         self.unprep()
         self.foo = foo
-        self.nscans = nscans
+        self.every = every
 
     def prep(self):
         if self.prepped:
             return
         if not pdaq:
             raise RuntimeError('No picoDAQ library found')
-        ichans = []
+
+
         for c in self.chans:
-            if c.startswith("ai"):
-                ichans.append(int(c[2:]))
-        self.nchans = len(ichans)
-        ochans = []
-        olines = []
-        for chn in self.ochans:
-            if chn.startswith("ao"):
-                ochans.append(int(chn[2:]))
-            elif chn.startswith("do"):
-                olines.append(int(chn[2:]))
-            else:
+            if not c.startswith("ai"):
                 raise ValueError("Bad channel name")
-        self.pd = DAQProcess(port=self.dev,
-                             rate=self.acqrate_hz*picodaq.units.Hz,
-                             aichannels=ichans,
-                             aochannels=ochans,
-                             dolines=olines)
+        for chn in self.ochans:
+            if not chn.startswith("ao") and not chn.startswith("do"):
+                raise ValueError("Bad channel name")
+        
+        self.pd = QProcess()
+        self.pd.setProgram(pdserver)
+        self.pd.setArguments([self.dev, f"{int(self.acqrate_hz)}"]
+                             + self.chans + self.ochans)
+        self.pd.readyReadStandardOutput.connect(lambda: self.readproc())
+        self.pd.setProcessChannelMode(QProcess.ForwardedErrorChannel)
         self.prepped = True
 
     def feedstimdata(self, data: ArrayLike) -> None:
         """Add data to output queue
         Shape of data must match config
         """
+        print("espicodaq feedstimdata", data.shape, np.std(data, 0))
         if not self.pd:
             raise RuntimeError("Not prepared")
-        aidx = []
-        didx = []
-        for k, chn in enumerate(self.ochans):
-            if chn.startswith("ao"):
-                aidx.append(k)
-            elif chn.startswith("do"):
-                didx.append(k)
-            else:
-                raise ValueError("Bad channel name")
-        self.pd.write(data[:,aidx], data[:,didx])
+        bts = data.astype(np.float32).tobytes()
+        if self.pd.write(bts) != len(bts):
+            raise RuntimeError("Failed to write to picoDAQ process")
             
     def run(self) -> None:
+        print("espicodaq run")
         if not self.prepped:
             self.prep()
         if not self.prepped:
             raise RuntimeError('Failed to prepare, cannot run')
         if self.running:
             return
-        print("espicodaq run")
         self.pd.start()
-        self.timer = QTimer()
-        self.timer.timeout.connect(lambda: self.poll())
-        self.timer.start(10)
+        if not self.pd.waitForStarted(1000):
+            print(self.pd.errorString())
+            print(self.pd.readAllStandardError())
+            raise Exception("picoDAQ process not started")
         self.running = True
-
-    def poll(self):
-        if not self.running:
-            return
-        print("poll", time.time())
-        try:
-            dat = self.pd.read()
-        except EOFError:
-            self.stop()
-            raise
-        if not dat:
-            return
-        adat, _ = dat
-        self.buffer.append(adat)
-        self.bufcount += len(adat)
-        if self.bufcount >= self.nscans:
-            if self.foo:
-                self.foo()
-            self.bufcount -= self.nscans
+        print("espicodaq running")
      
     def stop(self) -> None:
+        print("espicodaq stop")
         if self.running:
             self.running = False
-            self.pd.stop()
-            self.timer.stop()
-            self.timer = None
+            self.pd.close()
+            if self.pd.atEnd():
+                print("stopped")
+                return
+            if not self.pd.waitForFinished(1000):
+                print("picoDAQ process not finished")
+                self.pd.terminate()
+                if not self.pd.waitForFinished(1000):
+                    raise RuntimeError("picoDAQ process not finished")
 
     def unprep(self) -> None:
         if self.running:
@@ -208,9 +187,11 @@ class ContAcqTask:
         if not self.running:
             return 0
         T, C = dst.shape
-        if len(self.buffer):
-            dat = np.concatenate(self.buffer, 0)
-        nscans = min(T, self.nscans, len(dat))
+        if not len(self.buffer):
+            return 0      
+        dat = np.concatenate(self.buffer, 0)
+        
+        nscans = min(T, self.every, len(dat))
         if nscans < len(dat):
             self.buffer = [dat[nscans:]]
             self.bufcount = len(self.buffer[0])
@@ -219,6 +200,17 @@ class ContAcqTask:
             self.bufcount = 0
         dst[:nscans] = dat[:nscans]
         return nscans
+
+    def readproc(self):
+        dat = self.pd.read(1200) # arbitrary, to be fixed
+        ar = np.frombuffer(dat, np.float32).reshape(-1, len(self.chans))
+        self.bufcount += len(ar)
+        self.buffer.append(ar)
+        if self.bufcount >= self.every:
+            self.bufcount -= self.every
+            if self.foo:
+                self.foo()
+ 
 
 ######################################################################
 
@@ -235,6 +227,7 @@ class FiniteProdTask:
         self.prepped = False
         self.running = False
         self.data = data
+        raise RuntimeError("Not yet implemented")
 
     def __del__(self):
         self.stop()
