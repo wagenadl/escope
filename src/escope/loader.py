@@ -120,12 +120,9 @@ def plot(data: np.ndarray, info: dict):
     This function plots all the channels in a single figure;
     sweeps are concatenated together.
     '''
+    import matplotlib.pyplot as plt
     COLORS = [ [ 0.9, 0.4, 0 ], [ 0, 0.6, 1 ], [ .8, 0, .9 ], [ 0., .8, 0. ],
                [ .9, 0, 0 ], [ 0, 0.4, 0 ], [ 0, 0, .8 ], [ 0.5, 0.3, 0 ] ]
-
-
-    import matplotlib.pyplot as plt
-    plt.ion()
 
     units = []
     factors = []
