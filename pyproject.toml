@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "escope"
-version = "3.4.1"
+version = "3.4.2"
 authors = [
   { name="Daniel A. Wagenaar", email="daw@caltech.edu" }
 ]
@@ -14,7 +14,7 @@ readme = "README.md"
 dependencies = [
   "pyqt5",
   "numpy",
-  "numba",
+  "numba==0.61.2",
   "nidaqmx",
 ]
 

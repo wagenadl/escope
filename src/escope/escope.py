@@ -22,7 +22,7 @@ from .escopelib.estriggerbuffer import ESTriggerBuffer
 from .escopelib import serializer
 from .escopelib.ledlabel import LEDLabel
 
-VERSION = "3.4.0"
+VERSION = "3.4.2"
 
 
 def _parsefilename(name):
@@ -103,13 +103,11 @@ class MainWin(QMainWindow):
 
     def makeContents(self):
         LSIZE = 40
-        RSIZE = 110
         BSIZE = 35
 
-        wdg = QLabel("500 mV", self)
-        RSIZE = max(wdg.sizeHint().width() + 4, 50)
-        wdg.setParent(None)
-        del wdg
+        wid = QFontMetrics(self.font()).boundingRect("500 mV").width()
+        RSIZE = max(wid + 16, 80)
+        print("RSIZE", RSIZE)
 
         # First row of buttons
         hw = QPushButton()
