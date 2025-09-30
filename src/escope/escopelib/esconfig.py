@@ -149,7 +149,7 @@ def acqrates(ada):
     typ = ada[0]
     sr = Struct()
     sr.min = 5000
-    sr.max = 20000
+    sr.max = 100000
     if typ=='nidaq':
         # Get min and max from hardware?
         pass
