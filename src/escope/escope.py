@@ -2,7 +2,7 @@
 
 # escope.py
 
-VERSION = "4.0-alpha"
+VERSION = "4.0.0"
 
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -26,10 +26,8 @@ from .escopelib import serializer
 from .escopelib.ledlabel import LEDLabel
 from .escopelib import esparkwin
 
-
 import signal
 signal.signal(signal.SIGINT, signal.SIG_DFL)
-
 
 def _parsefilename(name):
     m = re.search(r"(\d{8}-\d{6})-(\d{3})\.escope$", name)
@@ -117,8 +115,10 @@ class MainWin(QMainWindow):
 
     def makeContents(self):
         LSIZE = 40
-        RSIZE = 110
         BSIZE = 35
+
+        wid = QFontMetrics(self.font()).boundingRect("500 mV").width()
+        RSIZE = max(wid + 16, 80)
 
         # First row of buttons
         hw = QPushButton()

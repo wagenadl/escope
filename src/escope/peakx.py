@@ -15,21 +15,43 @@
 # along with this software. If not, see <http://www.gnu.org/licenses/>.
 
 
-from numba import jit
+#from numba import jit
 import numpy as np
 from typing import Optional, Tuple
 
-@jit
+#@jit
+#def _schmittcore(data, thr_on, thr_off):
+#    trans = []
+#    isup = False
+#    for k in range(len(data)):
+#        if data[k]<=thr_off if isup else data[k]>=thr_on:
+#            trans.append(k)
+#            isup = not isup
+#    ion = trans[::2]
+#    ioff = trans[1::2]
+#    return ion, ioff
+
 def _schmittcore(data, thr_on, thr_off):
     trans = []
     isup = False
-    for k in range(len(data)):
-        if data[k]<=thr_off if isup else data[k]>=thr_on:
-            trans.append(k)
-            isup = not isup
+    upcros = np.diff((data >= thr_on).astype(int)) > 0
+    dncros = np.diff((data <= thr_off).astype(int)) > 0
+    anyi = np.nonzero(upcros | dncros)[0]
+    for i in anyi:
+        if isup:
+            if dncros[i]:
+                trans.append(i)
+                isup = False
+        else:
+            if upcros[i]:
+                trans.append(i)
+                isup = True
+
+    trans = np.array(trans) + 1      
     ion = trans[::2]
     ioff = trans[1::2]
     return ion, ioff
+    
 
 class STARTTYPE:
     DROP_PARTIAL = 0
