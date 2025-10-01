@@ -67,6 +67,7 @@ class ESDS_Dummy(ESDataSource):
     def __init__(self, cfg):
         ESDataSource.__init__(self, cfg)
         self.timerid = None
+        self.acqtask = None
 
     def reconfig(self):
         ESDataSource.reconfig(self)
