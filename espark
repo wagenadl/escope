@@ -1,4 +1,0 @@
-#!env python3
-
-import src.escope.espark
-src.escope.espark.main()
