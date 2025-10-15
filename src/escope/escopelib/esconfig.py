@@ -50,8 +50,8 @@ def scale125(uold, du):
     return unew
 
 
-_prefix = 'pnuµm kMG'
-_prvalue = 10**np.array([-12, -9, -9, -6, -3, 0, 3, 6, 9, np.inf])
+_prefix = 'pnuµm kMG' # accept u and mu for micro, report mu
+_prvalue = 10**np.array([-12, -9, -6, -6, -3, 0, 3, 6, 9, np.inf])
 
 def suitableunit(num, uni):
     """Finds appropriate metric prefix for a number
