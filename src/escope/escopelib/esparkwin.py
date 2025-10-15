@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import *
 import sys
 import os
 import re
+import math
 import pickle
 import numpy as np
 from . import espconfig
@@ -508,8 +509,17 @@ class MainWin(QWidget):
             for a in ['amp1_u', 'amp2_u']:
                 for b in ['base', 'delta', 'delti']:
                     s = str(self.hpu[k][a][b].text())
+                    print(a, b, s, self.cfg.conn.units[k], self.cfg.conn.scale[k])
                     if len(s):
-                        s = s[:-1] + self.cfg.conn.units[k][-1]
+                        olduni = s[-1] # without prefix
+                        newuni = self.cfg.conn.units[k][-1] # without prefix
+                        if olduni != newuni:
+                            val = espconfig.unniceunit(s, olduni)
+                            if newuni == 'A': # V to A
+                                val = math.copysign(min(abs(val)/1e6, 1e-8), val)
+                            else: # A to V
+                                val = math.copysign(min(abs(val)*1e6, 1), val)
+                            s = espconfig.niceunit(val, newuni)
                         self.hpu[k][a][b].setText(s)
                         self.newPulse(a+'.'+b, k, maydraw=False)
             self.newPulse('amp1_u.base', k, forcedraw=True)
