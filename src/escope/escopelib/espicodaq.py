@@ -29,7 +29,7 @@ try:
     import picodaq
     pdaq = True
     print("(got picodaq)")
-    pdserver = "/home/wagenaar/cntlgit/picodaq-241001/software/pdserver"
+    pdserver = "pdserver"
 except ImportError as exc:
     import sys
     pdaq = None
