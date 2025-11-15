@@ -24,63 +24,105 @@ import sys
 
 from . import esconfig
 
-from numba import jit
+try:
+    from numba import jit
+    havejit = True
+except ModuleNotFoundError:
+    havejit = False
 
-@jit(nopython=True)
-def trueblue(xx, ichn, stride, yy):
-    X = xx.shape[0]
-    Y = len(yy)//2
-    if Y==0 or X==0:
-        return
-    i0 = 0
-    for k in range(Y):
-        i1 = (k+1)*X//Y
-        ymin = xx[i0, ichn]
-        ymax = ymin
-        for n in range(i0+1, i1):
-            x = xx[n,ichn]
-            if x < ymin:
-                ymin = xx[n, ichn]
-            elif x>ymax:
-                ymax = x
-        yy[k] = ymin
-        yy[2*Y-1-k] = ymax
-        i0 = i1
+lastkk = None
+lastX = -1
+lastY = -1
+    
+if havejit:    
+    @jit(nopython=True)
+    def trueblue(xx, ichn, yy):
+        X = xx.shape[0]
+        Y = len(yy)//2
+        if Y==0 or X==0:
+            return
+        i0 = 0
+        for k in range(Y):
+            i1 = (k+1)*X//Y
+            ymin = xx[i0, ichn]
+            ymax = ymin
+            for n in range(i0+1, i1):
+                x = xx[n,ichn]
+                if x < ymin:
+                    ymin = xx[n, ichn]
+                elif x>ymax:
+                    ymax = x
+            yy[k] = ymin
+            yy[2*Y-1-k] = ymax
+            i0 = i1
+else:
+    def trueblue(xx, ichn, yy):
+        global lastkk, lastX, lastY
+        X = xx.shape[0]
+        Y = len(yy)//2
+        if Y==0 or X==0:
+            return
+        if lastX != X or lastY != Y:
+            lastX = X
+            lastY = Y
+            lastkk = np.floor(np.arange(Y+1) * X/Y).astype(int)
+        if Y > X:
+            print(yy.shape, Y)
+            yy[:Y] = xx[lastkk[:-1], ichn]
+            yy[2*Y:Y-1:-1] = xx[lastkk[:-1], ichn]
+        else:
+            k0 = lastkk[0]
+            for j in range(Y):
+                k1 = lastkk[j+1]
+                yy[j] = np.min(xx[k0:k1, ichn])
+                yy[2*Y-1-j] = np.max(xx[k0:k1, ichn])
+                k0 = k1
 
-
-def sample(xx, ichn, stride, yy):
+                
+def sample(xx, ichn, yy):
+    global lastkk, lastX, lastY
     X = xx.shape[0]
     Y = len(yy)
     if Y==0 or X==0:
         return
-    xi = np.array(np.floor(np.arange(Y+1)*X/Y),dtype=int)
-    yy[:Y] = xx[xi[:-1],ichn]
+    if lastX != X or lastY != Y:
+        lastX = X
+        lastY = Y
+        lastkk = np.floor(np.arange(Y+1) * X/Y).astype(int)
+    yy[:Y] = xx[lastkk[:-1], ichn]
 
 
-@jit(nopython=True)
-def limpoly1(yy, ymin, ymax):
-    Y = len(yy)
-    Y2 = len(yy)-1
-    for k in range(Y):
-        if yy[k]<=ymin:
-            yy[k] = ymin
-        elif yy[k]>=ymax:
-            yy[k] = ymax
+if havejit:
+    @jit(nopython=True)
+    def limpoly1(yy, ymin, ymax):
+        Y = len(yy)
+        Y2 = len(yy)-1
+        for k in range(Y):
+            if yy[k]<=ymin:
+                yy[k] = ymin
+            elif yy[k]>=ymax:
+                yy[k] = ymax
 
 
-@jit(nopython=True)
-def limpoly2(yy, ymin, ymax):
-    Y = len(yy)/2
-    Y2 = len(yy)-1
-    for k in range(Y):
-        if yy[k]<=ymin:
-            yy[k] = ymin
-            yy[Y2-k] = ymin
-        elif yy[Y2-k]>=ymax:
-            yy[k] = ymax
-            yy[Y2-k] = ymax
+    @jit(nopython=True)
+    def limpoly2(yy, ymin, ymax):
+        Y = len(yy)/2
+        Y2 = len(yy)-1
+        for k in range(Y):
+            if yy[k]<=ymin:
+                yy[k] = ymin
+                yy[Y2-k] = ymin
+            elif yy[Y2-k]>=ymax:
+                yy[k] = ymax
+                yy[Y2-k] = ymax
+else:
+    def limpoly1(yy, ymin, ymax):
+        yy = np.clip(yy, ymin, ymax)
 
+    def limpoly2(yy, ymin, ymax):
+        yy = np.clip(yy, ymin, ymax)
 
+        
 def mkpoly(xx,yy,offset,scale, hp):
     poly = QPolygon(len(xx))
     for k in range(len(xx)):
@@ -297,9 +339,9 @@ class ESScopeWin(QWidget):
             if self.yy[k] is None or len(self.yy[k]) != len(self.xx):
                 self.yy[k] = np.zeros(self.xx.shape)
             if self.dispStyle==2:
-                trueblue(self.dat[i0:i1,:], k, nchan, self.yy[k])
+                trueblue(self.dat[i0:i1,:], k, self.yy[k])
             else:
-                sample(self.dat[i0:i1,:], k, nchan, self.yy[k])
+                sample(self.dat[i0:i1,:], k, self.yy[k])
 
         if self.yy is not None:
             for k in range(len(self.yy)):
@@ -420,7 +462,7 @@ if __name__ == '__main__':
     if True:
         xx = np.random.rand(1000,1)
         ymin = np.zeros(20)
-        trueblue(xx, 0, 1, ymin)
+        trueblue(xx, 0, ymin)
 
     app = QApplication(sys.argv)
     cfg = esconfig.basicconfig()
