@@ -26,9 +26,14 @@ import numpy as np
 
 try:
     import nidaqmx
+    import nidaqmx.errors
     import nidaqmx.stream_readers
     import nidaqmx.stream_writers
     import nidaqmx.constants
+    try:
+        nidaqmx.system.System.local()
+    except nidaqmx.errors.DaqNotSupportedError:
+        raise ImportError
     nidaq = True
     print("(got nidaqmx)")
 except ImportError:
