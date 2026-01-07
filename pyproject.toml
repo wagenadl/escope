@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "escope"
-version = "3.4.0"
+version = "4.0.0"
 authors = [
   { name="Daniel A. Wagenaar", email="daw@caltech.edu" }
 ]
@@ -14,8 +14,9 @@ readme = "README.md"
 dependencies = [
   "pyqt5",
   "numpy",
-  "numba",
+  "numba==0.61.2",
   "nidaqmx",
+  "pyqtgraph",
 ]
 
 
@@ -32,4 +33,3 @@ classifiers = [
 
 [project.scripts]
 escope = "escope.escope:main"
-espark = "escope.espark:main"

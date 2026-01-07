@@ -41,7 +41,7 @@ def deviceList() -> List[str]:
     if pdaq is None:
         return []   
     devs = []
-    for port in picodaq.device.picodaqs():
+    for port in picodaq.device.devices():
         if port.startswith("/dev/ttyACM"):
             devs.append(port[8:])
         else:
