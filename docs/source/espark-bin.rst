@@ -1,3 +1,5 @@
+.. _espark:
+
 Using Stimuli
 =============
 

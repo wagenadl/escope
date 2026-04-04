@@ -3,9 +3,9 @@
 License information
 ===================
 
-EScope, ESpark, and this documentation are:
+EScope and this documentation are:
 
-Copyright (C) 2010–2024 Daniel A. Wagenaar
+Copyright (C) 2010–2026 Daniel A. Wagenaar
 
 
 Documentation license
@@ -18,12 +18,12 @@ Commons Attribution-ShareAlike 3.0 Unported License
 Software license
 ----------------
 
-EScope and ESpark are free software: you can redistribute them and/or
+EScope is free software: you can redistribute them and/or
 modify them under the terms of the GNU General Public License as
 published by the Free Software Foundation, either version 3 of the
 License, or (at your option) any later version.
 
-EScope and ESpark are distributed in the hope that they will be
+EScope is distributed in the hope that they will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 General Public License for more details.

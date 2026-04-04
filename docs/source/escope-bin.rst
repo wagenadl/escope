@@ -36,6 +36,14 @@ can be dragged left or right. Use the “Auto trigger” mode to make
 EScope pretend it sees a trigger when there is a long time between
 actual triggers.
 
+
+Stimuli
+-------
+
+To define stimuli, click the “Stimuli” button. This opens the
+separate :ref:`Stimuli window <espark>`.
+
+
 Saving acquired data
 --------------------
 

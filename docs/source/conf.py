@@ -19,12 +19,12 @@ sys.path.insert(0, os.path.abspath('../../src/'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'EScope and ESpark'
-copyright = '2024, Daniel A. Wagenaar'
+project = 'EScope'
+copyright = '2026, Daniel A. Wagenaar'
 author = 'Daniel A. Wagenaar'
 
 # The full version, including alpha/beta/rc tags
-release = '3.3.0'
+release = '4.1.0'
 
 
 # -- General configuration ---------------------------------------------------
