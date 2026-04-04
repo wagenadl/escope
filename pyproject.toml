@@ -16,6 +16,7 @@ dependencies = [
   "numpy",
   "numba==0.61.2",
   "nidaqmx",
+  "picodaq",
   "pyqtgraph",
 ]
 

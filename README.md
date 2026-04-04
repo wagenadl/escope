@@ -1,5 +1,5 @@
-<img alt="EScope and ESpark" src="https://github.com/wagenadl/escope/blob/main/docs/source/banner.svg" width="100%">
-EScope and ESpark are a software oscilloscope and function generator
+<img alt="EScope" src="https://github.com/wagenadl/escope/blob/main/docs/source/banner.svg" width="100%">
+EScope is a software oscilloscope and function generator
 aimed primarily but not exclusively at electrophysiology.
 
 ## Screenshots
@@ -8,7 +8,7 @@ EScope running in “demo” mode on Linux without a DAQ card:
 
 <img alt="EScope screenshot" src="https://github.com/wagenadl/escope/blob/main/docs/source/escope.png" width="80%">
 
-ESpark running on Windows:
+The ESpark module running on Windows:
 
 <img alt="ESpark screenshot" src="https://github.com/wagenadl/escope/blob/main/docs/source/espark.png" width="80%">
                               
@@ -24,16 +24,16 @@ EScope can continuously stream acquired data to disk. Alternatively,
 individually acquired single sweeps can be saved. A Python module is
 included to conveniently load saved data for further analyis.
 
-ESpark can output a variety of pulse waveforms either singly or in
-programmable trains. Up to four analog or digital channels can be
-driven concurrently. The software displays previews of the signals to
-be generated making it particularly easy for students to design
-complex stimuli.
+Through its “ESpark module”, EScope can output a variety of pulse
+waveforms either singly or in programmable trains. Up to four analog
+or digital channels can be driven concurrently. The software displays
+previews of the signals to be generated making it particularly easy
+for students to design complex stimuli.
 
 ## Compatibility
 
-EScope and ESpark are compatible with most National Instruments
-multifunction data acquisition boards and does not require a LabView
+EScope is compatible with the picoDAQ data acquisition system from Pasadena Neurotech and with most National Instruments
+multifunction data acquisition boards. EScope  does not require a LabView
 license. The software has been tested on both Windows and
 Linux. It will likely work on MacOS as well.
 
@@ -46,8 +46,7 @@ demand your money back.
 ## Prerequisites
 
 To use with NI hardware, you first need to install the NIDAQmx
-software. This is not necessary on computers where you only wish to
-analyze data you acquired on another computer.
+software.
 
 ## Installation
 
@@ -55,16 +54,15 @@ Installation is as easy as
 
     pip install escope
     
+This will pull in several dependencies. You may prefer to set up a
+[virtual environment](https://docs.python.org/3/library/venv.html).
+    
 ## Running
 
-To run the software, open a terminal and type either
+To run the software, open a terminal and type
 
     escope
 
-or
-
-    espark
-    
 In Windows, after you run the software in this fashion once, you
 should be able to run it from the start menu as well. (If you know
 of a way to make “pip” create a start menu entry, please contact
@@ -83,5 +81,5 @@ Full documentation is at [readthedocs.io](https://escope.readthedocs.io).
 
 ## License
 
-EScope and ESpark are licensed under the GPL license, version 3 or—at your choice—any later version. See [LICENSE](LICENSE) for more information.
+EScope is licensed under the GPL license, version 3 or—at your choice—any later version. See [LICENSE](LICENSE) for more information.
 

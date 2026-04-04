@@ -32,7 +32,8 @@ try:
     import nidaqmx.constants
     try:
         nidaqmx.system.System.local()
-    except nidaqmx.errors.DaqNotSupportedError:
+    except (nidaqmx.errors.DaqNotSupportedError,
+            nidaqmx.errors.DaqNotFoundError):
         raise ImportError
     nidaq = True
     print("(got nidaqmx)")

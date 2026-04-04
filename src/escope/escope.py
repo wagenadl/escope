@@ -602,7 +602,7 @@ class MainWin(QMainWindow):
         abt = QMessageBox()
         txt = f"""<b>EScope</b> v. {VERSION}<br>
 
-        (C) 2010, 2023–2025 Daniel A. Wagenaar<br><br>
+        (C) 2010, 2023–2026 Daniel A. Wagenaar<br><br>
 
         <b>EScope</b> is an electronic oscilloscope.  More
         information, including a user manual, is available at <a
@@ -651,7 +651,7 @@ class MainWin(QMainWindow):
 
 def main():
     print(f'This is EScope {VERSION}')
-    print("(C) 2010, 2023–2025 Daniel A. Wagenaar")
+    print("(C) 2010, 2023–2026 Daniel A. Wagenaar")
     print("EScope is free software. Click “About” to learn more.")
     
     os.chdir(os.path.expanduser("~/Documents"))
