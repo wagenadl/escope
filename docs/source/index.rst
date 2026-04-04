@@ -66,16 +66,15 @@ Linux. It will likely work on MacOS as well.
 
 *Important caveat:* National Instruments only fully supports a
 shockingly small number of their cards on Linux. (Many are supported
-only with “software timing”, which is completely useless.) If they do
-not properly support yours, the best I can suggest is that you
-(politely but firmly) demand your money back.
+only with “software timing”, which is completely useless.)  Double
+check before you buy!
 
 Prerequisites
 -------------
 
 To use with NI hardware, you first need to install the NIDAQmx
-software. This will pull in several dependencies. You may prefer to set up a
-`virtual environment <https://docs.python.org/3/library/venv.html>`_.
+software. To use with picoDAQ hardware, no additional software is
+required.
 
 
 Installation
@@ -84,6 +83,9 @@ Installation
 Installation is as easy as::
 
     pip install escope
+
+ This will pull in several dependencies. You may prefer to set up a
+`virtual environment <https://docs.python.org/3/library/venv.html>`_.    
     
 Using the software
 ==================

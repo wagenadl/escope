@@ -40,14 +40,14 @@ will likely work on MacOS as well.
 
 *Important caveat:* National Instruments only fully supports a
 shockingly small number of their cards on Linux. (Many are supported
-only with “software timing”, which is completely useless.) If they do
-not properly support yours, the best I can suggest is that you loudly
-demand your money back.
+only with “software timing”, which is completely useless.) Double
+check before you buy!
 
 ## Prerequisites
 
 To use with NI hardware, you first need to install the NIDAQmx
-software.
+software.  To use with picoDAQ hardware, no additional software is
+required.
 
 ## Installation
 
