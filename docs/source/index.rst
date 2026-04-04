@@ -6,7 +6,7 @@
 Introduction
 ============
 
-EScope and ESpark are a software oscilloscope and function generator
+EScope is a software oscilloscope and function generator
 aimed primarily but not exclusively at electrophysiology.
 
 
@@ -28,7 +28,7 @@ Screenshots
     :align: center
     :class: no-scaled-link
 
-    ESpark running on Windows
+    The Stimuli module running on Windows
               
 Features
 --------
@@ -43,11 +43,11 @@ EScope can continuously stream acquired data to disk. Alternatively,
 individually acquired single sweeps can be saved. A Python module is
 included to conveniently load saved data for further analysis.
 
-ESpark can output a variety of pulse waveforms either singly or in
-programmable trains. Up to four analog or digital channels can be
-driven concurrently. The software displays previews of the signals to
-be generated making it particularly easy for students to design
-complex stimuli.
+EScope contains a “Stimuli” module that can output a variety of pulse
+waveforms either singly or in programmable trains. Up to four analog
+or digital channels can be driven concurrently. The software displays
+previews of the signals to be generated making it particularly easy
+for students to design complex stimuli.
 
 Actual installation
 ===================
@@ -55,9 +55,10 @@ Actual installation
 Compatibility
 -------------
 
-EScope and ESpark are compatible with most National Instruments
-multifunction data acquisition boards and does not require a LabView
-license. ESpark will *not* work with boards that do not support
+EScope is compatible with the picoDAQ data acquisition system from
+Pasadena Neurotech and with most National Instruments multifunction
+data acquisition boards and does not require a LabView license. The
+Stimuli module will *not* work with boards that do not support
 “hardware-timed” analog output.
 
 The software has been tested on both Windows and
@@ -73,8 +74,9 @@ Prerequisites
 -------------
 
 To use with NI hardware, you first need to install the NIDAQmx
-software. This is not necessary on computers where you only wish to
-analyze data you acquired on another computer.
+software. This will pull in several dependencies. You may prefer to set up a
+`virtual environment <https://docs.python.org/3/library/venv.html>`_.
+
 
 Installation
 ------------
@@ -91,13 +93,9 @@ Running from the command prompt
 
 .. container:: compound
 
-    To run the software, open a terminal and type either::
+    To run the software, open a terminal and type::
     
         escope
-    
-    or::
-    
-        espark
 
 In Windows, after you run the software in this fashion once, you
 should be able to run it from the start menu as well. (If you know of
@@ -128,7 +126,7 @@ Development occurs on `github <https://github.com/wagenadl/escope>`_.
 License information
 ===================
 
-EScope and ESpark are free software. Read what that means here:
+EScope is free software. Read what that means here:
  
 .. toctree::
    :maxdepth: 1

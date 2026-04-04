@@ -1,7 +1,7 @@
-Using ESpark
-============
+Using Stimuli
+=============
 
-The ESpark window comprises up to four vertically stacked sections,
+The Stimuli window comprises up to four vertically stacked sections,
 each used to configure pulses and pulse trains to be sent to one
 analog or digital output. When you click “Run”, all the configured
 pulse trains are sent to their respective outputs, with
@@ -28,7 +28,7 @@ scale factors here. That way, the graphs and configuration buttons on the main s
 Configuring pulses
 ------------------
 
-ESpark currently supports four pulse types: “Monophasic”, “Biphasic”,
+Four pulse types are currently supported: “Monophasic”, “Biphasic”,
 “Ramp”, and “Sine”.
 
 A “Monophasic” pulse is defined simply by its amplitude and duration.

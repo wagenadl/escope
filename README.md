@@ -8,7 +8,7 @@ EScope running in “demo” mode on Linux without a DAQ card:
 
 <img alt="EScope screenshot" src="https://github.com/wagenadl/escope/blob/main/docs/source/escope.png" width="80%">
 
-The ESpark module running on Windows:
+The Stimuli module running on Windows:
 
 <img alt="ESpark screenshot" src="https://github.com/wagenadl/escope/blob/main/docs/source/espark.png" width="80%">
                               
@@ -24,7 +24,7 @@ EScope can continuously stream acquired data to disk. Alternatively,
 individually acquired single sweeps can be saved. A Python module is
 included to conveniently load saved data for further analyis.
 
-Through its “ESpark module”, EScope can output a variety of pulse
+Through its “Stimuli” module, EScope can output a variety of pulse
 waveforms either singly or in programmable trains. Up to four analog
 or digital channels can be driven concurrently. The software displays
 previews of the signals to be generated making it particularly easy
@@ -32,10 +32,11 @@ for students to design complex stimuli.
 
 ## Compatibility
 
-EScope is compatible with the picoDAQ data acquisition system from Pasadena Neurotech and with most National Instruments
-multifunction data acquisition boards. EScope  does not require a LabView
-license. The software has been tested on both Windows and
-Linux. It will likely work on MacOS as well.
+EScope is compatible with the picoDAQ data acquisition system from
+Pasadena Neurotech and with most National Instruments multifunction
+data acquisition boards. EScope does not require a LabView
+license. The software has been tested on both Windows and Linux. It
+will likely work on MacOS as well.
 
 *Important caveat:* National Instruments only fully supports a
 shockingly small number of their cards on Linux. (Many are supported
