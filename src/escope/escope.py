@@ -571,9 +571,9 @@ class MainWin(QMainWindow):
         esc, cfg = _loadconfig(name)
         dat, sweepno = _loaddata(name, esc, cfg, sweepno)
 
-        self._updatetoloadedsweep(cfg, rundate, sweepno)
+        self._updatetoloadedsweep(cfg, rundate, sweepno, dat)
 
-    def _updatetoloadedsweep(self, cgf, rundate, sweepno):
+    def _updatetoloadedsweep(self, cfg, rundate, sweepno, dat):
         self.cfg.hw = cfg.hw
         self.cfg.conn = cfg.conn
         self.cfg.trig = cfg.trig
