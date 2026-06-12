@@ -14,7 +14,7 @@ readme = "README.md"
 dependencies = [
   "pyqt5",
   "numpy",
-  "numba==0.61.2",
+  "numba",
   "nidaqmx",
   "picodaq",
   "pyqtgraph",
