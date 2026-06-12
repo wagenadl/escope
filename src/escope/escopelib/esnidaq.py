@@ -169,7 +169,7 @@ class ContAcqTask:
         T, C = dst.shape
         nscans = min(T, self.nscans)
         dat = np.empty((C, nscans))
-        print(C, nscans)
+        #print(C, nscans)
         n = self.rdr.read_many_sample(dat, nscans)
         dst[:n,:] = dat.T
         return n
