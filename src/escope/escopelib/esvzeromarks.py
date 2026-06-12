@@ -27,7 +27,7 @@ import numpy as np
 def mkpoly(xx,yy):
     poly = QPolygon(len(xx))
     for k in range(len(xx)):
-        poly.setPoint(k,xx[k],yy[k])
+        poly.setPoint(k, int(xx[k]), int(yy[k]))
     return poly
 
 class ESVZeroMarks(QWidget):
@@ -64,24 +64,24 @@ class ESVZeroMarks(QWidget):
                 xlp = xrp - 2*rsclp
                 self.xp[k] = (xrp+xlp)/2.
 
-                if self.tracking==k:
+                if self.tracking == k:
                     yp = self.tracky
                 else:
                     y = self.cfg.vert.offset_div[k]
                     y0 = self.cfg.vert.ylim[0] + 0.
                     y1 = self.cfg.vert.ylim[1]
-                    yp = hp * (1 - (y-y0)/(y1-y0))
+                    yp = hp * (1 - (y - y0) / (y1 - y0))
 
                 if yp < 0:
                     # Up arrow
-                    p.drawPolygon(mkpoly([xlp, xrp, (xlp+xrp)/2],
-                                         [2.5*rsclp, 2.5*rsclp, 0]))
+                    p.drawPolygon(mkpoly([xlp, xrp, (xlp + xrp) / 2],
+                                         [2.5 * rsclp, 2.5 * rsclp, 0]))
                     self.yp[k] = .75*rsclp
-                elif yp >= hp:
+                elif yp > hp:
                     # Down arrow
-                    p.drawPolygon(mkpoly([xlp, xrp, (xlp+xrp)/2],
-                                         [hp-2.5*rsclp-1, hp-2.5*rsclp-1, hp-1]))
-                    self.yp[k] = hp-.75*rsclp
+                    p.drawPolygon(mkpoly([xlp, xrp, (xlp + xrp) / 2],
+                                         [hp - 2.5 * rsclp - 1, hp - 2.5 * rsclp - 1, hp - 1]))
+                    self.yp[k] = hp - .75*rsclp
                 else:
                     # Regular marker
                     p.drawEllipse(QPoint(int(xlp+xrp)//2, int(yp)),
@@ -99,7 +99,9 @@ class ESVZeroMarks(QWidget):
             
         if delta!=0:
             y = self.cfg.vert.offset_div[k] + delta/120./2.
-            self.cfg.vert.offset_div[k] = y
+            # y0 = self.cfg.vert.ylim[0] + 0.
+            # y1 = self.cfg.vert.ylim[1]
+            self.cfg.vert.offset_div[k] = y # min(max(y, y0), y1)
             self.update()
             print(f'Offset {k} changed to {y:.1f} divisions')
             self.cfgChanged.emit(k)
@@ -107,8 +109,8 @@ class ESVZeroMarks(QWidget):
     def mousePressEvent(self,evt):
         x = evt.x()
         y = evt.y()
-        k = np.nanargmin((self.xp-x)**2+(self.yp-y)**2)
-        if abs(self.yp[k]-y)>self.rp or self.xp[k]-x>self.rp:
+        k = np.nanargmin((self.xp - x) ** 2 + (self.yp - y)**2)
+        if abs(self.yp[k] - y) > self.rp + 2 or self.xp[k] - x > self.rp + 2:
             k = None
         self.tracking = k
         self.wheeling = k
@@ -119,8 +121,10 @@ class ESVZeroMarks(QWidget):
 
     def mouseMoveEvent(self,evt):
         if self.tracking is not None:
-            y=evt.y()
-            self.tracky = self.trackystart + y - self.tracky0
+            y = evt.y()
+            tracky = self.trackystart + y - self.tracky0
+            # tracky = min(max(tracky, 0), self.height() - 1)
+            self.tracky = tracky
             self.update()
 
     def mouseReleaseEvent(self,evt):
@@ -130,12 +134,14 @@ class ESVZeroMarks(QWidget):
         
         self.tracking = None
         
-        y=evt.y()
+        y = evt.y()
         y1p = self.trackystart + y - self.tracky0
         hp = self.height()+0.
         y0 = self.cfg.vert.ylim[0] + 0.
         y1 = self.cfg.vert.ylim[1]
-        y = y0 + (y1-y0)*(1-y1p/hp)
+        y = y0 + (y1 - y0) * (1 - y1p / hp)
+        print("release", k, y)
+        # y = min(max(y, y0), y1)
         must_emit = y != self.cfg.vert.offset_div[k]
         self.cfg.vert.offset_div[k] = y
         self.update()

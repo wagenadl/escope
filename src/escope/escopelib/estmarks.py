@@ -34,7 +34,7 @@ def limscale(scl):
 def mkpoly(xx,yy):
     poly = QPolygon(len(xx))
     for k in range(len(xx)):
-        poly.setPoint(k,int(xx[k]),int(yy[k]))
+        poly.setPoint(k, int(xx[k]), int(yy[k]))
     return poly
 
 EST_TIMESCALE = 1
@@ -174,21 +174,18 @@ class ESTMarks(QWidget):
                 self.timeChanged.emit()
         elif k==EST_TRIGDELAY:
             delta = evt.delta()
-            if delta!=0:
-                t = self.cfg.trig.delay_div - delta/120./2.
-                if t<self.cfg.hori.xlim[0]:
-                    t = self.cfg.hori.xlim[0]
-                elif t>self.cfg.hori.xlim[1]:
-                    t = self.cfg.hori.xlim[1]
-                if t!=self.cfg.trig.delay_div:
+            if delta != 0:
+                t = self.cfg.trig.delay_div - delta / 120. / 2.
+                t = min(max(t, self.cfg.hori.xlim[0]), self.cfg.hori.xlim[1])
+                if t != self.cfg.trig.delay_div:
                     self.cfg.trig.delay_div = t
                     self.update()
                     self.trigChanged.emit()
 
     def mousePressEvent(self,evt):
-        x=evt.x()
+        x = evt.x()
 
-        if self.xp_trig is not None and abs(self.xp_trig-x)<self.dxp_trig:
+        if self.xp_trig is not None and abs(self.xp_trig-x) < self.dxp_trig:
             k = EST_TRIGDELAY
         elif abs(self.xp_time-x)<self.divp/2:
             k = EST_TIMESCALE
@@ -216,16 +213,14 @@ class ESTMarks(QWidget):
 
     def mouseMoveEvent(self,evt):
         if self.tracking==EST_TIMESCALE:
-            dscl = (evt.x()-self.trackx0) / self.divp
+            dscl = (evt.x() - self.trackx0) / self.divp
             self.scl = limscale(esconfig.scale125(self.scl0, dscl))
             self.update()
         elif self.tracking==EST_TRIGDELAY:
-            x=evt.x()
-            self.trackx = self.trackxstart + x-self.trackx0
-            if self.trackx<0:
-                self.trackx = 0
-            elif self.trackx>=self.width():
-                self.trackx = self.width()-1
+            x = evt.x()
+            trackx = self.trackxstart + x - self.trackx0
+            trackx = min(max(trackx, 0), self.width() - 1)
+            self.trackx = trackx
             self.update()
 
     def mouseReleaseEvent(self,evt):
@@ -234,25 +229,22 @@ class ESTMarks(QWidget):
             return
         
         self.tracking = None
-        x=evt.x()
+        x = evt.x()
         if k==EST_TIMESCALE:
             dscl = (x-self.trackx0) / self.divp
             self.scl = limscale(esconfig.scale125(self.scl0, dscl))
-            must_emit = self.scl!=self.cfg.hori.s_div
+            must_emit = self.scl != self.cfg.hori.s_div
             self.cfg.hori.s_div = self.scl
             self.update()
             if must_emit:
                 self.timeChanged.emit()
         elif k==EST_TRIGDELAY:
-            x1p = self.trackxstart + x-self.trackx0
-            wp = self.width()+0.
+            x1p = self.trackxstart + x - self.trackx0
+            wp = self.width() + 0.
             x0 = self.cfg.hori.xlim[0] + 0.
             x1 = self.cfg.hori.xlim[1]
-            x = x0 + (x1-x0) * x1p/wp
-            if x<self.cfg.hori.xlim[0]:
-                x = self.cfg.hori.xlim[0]
-            elif x>self.cfg.hori.xlim[1]:
-                x = self.cfg.hori.xlim[1]
+            x = x0 + (x1-x0) * x1p / wp
+            x = min(max(x, x0), x1)
             must_emit = x!=self.cfg.trig.delay_div
             self.cfg.trig.delay_div = x
             self.update()
