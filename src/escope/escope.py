@@ -2,7 +2,7 @@
 
 # escope.py
 
-VERSION = "4.1.0"
+VERSION = "4.1.2"
 
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *

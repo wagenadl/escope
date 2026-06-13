@@ -36,7 +36,7 @@ try:
             nidaqmx.errors.DaqNotFoundError):
         raise ImportError
     nidaq = True
-    print("(got nidaqmx)")
+    print("Nidaqmx library loaded")
 except ImportError:
     nidaq = None
     print("No nidaqmx library")

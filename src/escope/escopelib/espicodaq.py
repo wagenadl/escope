@@ -28,7 +28,7 @@ import time
 try:
     import picodaq
     pdaq = True
-    print("(got picodaq)")
+    print("picodaq library loaded")
     pdserver = "pdserver"
 except ImportError as exc:
     import sys
@@ -139,7 +139,7 @@ class ContAcqTask:
         """Add data to output queue
         Shape of data must match config
         """
-        print("espicodaq feedstimdata", data.shape, np.std(data, 0))
+        #print("espicodaq feedstimdata", data.shape, np.std(data, 0))
         if not self.pd:
             raise RuntimeError("Not prepared")
         bts = data.astype(np.float32).tobytes()
@@ -147,7 +147,7 @@ class ContAcqTask:
             raise RuntimeError("Failed to write to picoDAQ process")
             
     def run(self) -> None:
-        print("espicodaq run")
+        #print("espicodaq run")
         if not self.prepped:
             self.prep()
         if not self.prepped:
@@ -160,15 +160,15 @@ class ContAcqTask:
             print(self.pd.readAllStandardError())
             raise Exception("picoDAQ process not started")
         self.running = True
-        print("espicodaq running")
+        #print("espicodaq running")
      
     def stop(self) -> None:
-        print("espicodaq stop")
+        #print("espicodaq stop")
         if self.running:
             self.running = False
             self.pd.close()
             if self.pd.atEnd():
-                print("stopped")
+                #print("stopped")
                 return
             if not self.pd.waitForFinished(1000):
                 print("picoDAQ process not finished")
@@ -246,7 +246,7 @@ class FiniteProdTask:
             return
         if not pdaq:
             raise RuntimeError('No PicoDAQ library found')
-        print("dev = ", self.dev)
+        #print("dev = ", self.dev)
         ochans = []
         olines = []
         aidx = []
