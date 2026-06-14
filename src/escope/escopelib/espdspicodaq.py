@@ -33,5 +33,4 @@ class ESPDS_Picodaq_Joint(ESPDS_Dummy):
         """Join gentask with acqtask
         """
         if self.cfg.hw.adapter == self.reccfg.hw.adapter:
-            print("join", self.chans)
             acqtask.feedstimdata(self.dat)

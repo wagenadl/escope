@@ -476,8 +476,15 @@ class MainWin(QMainWindow):
     def restart(self):
         wasRunning = self.ds is not None
         if wasRunning:
+            restartspark = False
+            if self.h_spark:
+                if self.h_spark.h_rep.isChecked() and not self.h_spark.stopped:
+                    restartspark = True
             self.stopRun()
-            self.startRun()
+            if restartspark:
+                self.spark_runrequest()
+            else:
+                self.startRun()
         self.update()
 
     def hwChanged(self):

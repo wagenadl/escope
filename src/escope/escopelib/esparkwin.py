@@ -561,6 +561,9 @@ class MainWin(QWidget):
         self.acqtask = acqtask
 
     def startRun(self):
+        if self.acqtask is None:
+            print("esparkwin: no acqtask")
+            return
         self.h_run.hide()
         self.h_stop.show()
         self.h_led.turnOn()
@@ -588,13 +591,13 @@ class MainWin(QWidget):
         rep = self.h_rep.isChecked()
         self.ds = None
         if rep:
-            QTimer.singleShot(int(self.cfg.train[0].period_s.base*1000), lambda: self.repeatRun())
+            QTimer.singleShot(int(self.cfg.train[0].period_s.base*1000),
+                              lambda: self.repeatRun())
         else:
             self.h_run.show()
             self.h_stop.hide()
 
     def repeatRun(self):
-        print("timerevent", self.h_rep.isChecked(), self.stopped)
         if self.h_rep.isChecked() and not self.stopped:
             self.startRun()
         else:
@@ -605,7 +608,7 @@ class MainWin(QWidget):
         abt = QMessageBox()
         txt = f"""<b>ESpark</b> v. {VERSION}<br>
 
-        (C) 2010, 2023, 2024 Daniel A. Wagenaar<br><br>
+        (C) 2010–2026 Daniel A. Wagenaar<br><br>
 
         <b>ESpark</b> is an electronic function generator.  More
         information, including a user manual, is available at <a

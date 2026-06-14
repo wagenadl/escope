@@ -132,7 +132,7 @@ class ESTriggerBuffer(ESDataSource):
                     break
                 k += 1
 
-    def _import_huntttrig_down(self, src, origidx):
+    def _import_hunttrig_down(self, src, origidx):
         k = 0
         if self.trig_primed<PRIMELIM:
             while k<src.size:
